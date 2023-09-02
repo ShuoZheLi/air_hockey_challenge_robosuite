@@ -31,8 +31,10 @@
     <default>
         <geom condim="4" solref="0.02 0.3"/>
         <default class="rim">
-            <geom type="box" material="grey" condim="6" friction="10000 0.0 0.0" priority="1"
-                  solref="-2000000 -250" solimp="0.99 0.999 0.001 0.5 2" group="1"/>
+            <!-- <geom type="box" material="grey" condim="6" friction="10000 0.0 0.0" priority="1"
+                  solref="-2000000 -250" solimp="0.99 0.999 0.001 0.5 2" group="1"/> -->
+                <geom type="box" material="grey" condim="6" friction="10000 0.0 0.0" priority="1"
+                solref="-200000 -250" solimp="0.99 0.999 0.001 0.5 2" group="1"/>
         </default>
     </default>
 
@@ -50,8 +52,10 @@
                 group="1" contype="1" conaffinity="1"/>
             </body>
             <body name="rim">
-<!--                <geom name="rim_home_l" class="rim" size="0.045 0.197 0.005" pos="-1.019 0.322 0.005"/>-->
-<!--                <geom name="rim_home_r" class="rim" size="0.045 0.197 0.005" pos="-1.019 -0.322 0.005"/>-->
+
+                <!-- not here -->
+               <!-- <geom name="rim_home_l" class="rim" size="0.045 0.197 0.005" pos="-1.019 0.322 0.005" group="1"/>
+               <geom name="rim_home_r" class="rim" size="0.045 0.197 0.005" pos="-1.019 -0.322 0.005" group="1"/> -->
 
                 <geom name="rim_home_l" class="rim" size="0.045 0.1945 0.005" pos="-1.019 0.3245 0.005" group="1"/>
                 <geom name="rim_home_r" class="rim" size="0.045 0.1945 0.005" pos="-1.019 -0.3245 0.005" group="1"/>
@@ -65,8 +69,9 @@
                 <geom name="rim_left" class="rim" size="1.064 0.045 0.015" pos="0 0.564 0.015" group="1"/>
                 <geom name="rim_right" class="rim" size="1.064 0.045 0.015" pos="0 -0.564 0.015" group="1"/>
 
-<!--                <geom name="rim_away_l" class="rim" size="0.045 0.197 0.005" pos="1.019 0.322 0.005"/>-->
-<!--                <geom name="rim_away_r" class="rim" size="0.045 0.197 0.005" pos="1.019 -0.322 0.005"/>-->
+                <!-- not here -->
+               <!-- <geom name="rim_away_l" class="rim" size="0.045 0.197 0.005" pos="1.019 0.322 0.005" group="1"/>
+               <geom name="rim_away_r" class="rim" size="0.045 0.197 0.005" pos="1.019 -0.322 0.005" group="1"/> -->
 
                 <geom name="rim_away_l" class="rim" size="0.045 0.1945 0.005" pos="1.019 0.3245 0.005" group="1"/>
                 <geom name="rim_away_r" class="rim" size="0.045 0.1945 0.005" pos="1.019 -0.3245 0.005" group="1"/>
@@ -79,7 +84,7 @@
         </body>
 
         <!-- <body name="base" pos="0.15 0 0.3" axisangle="0 1 0 -0.3925"> -->
-        <body name="base" pos="1 0 1">
+        <body name="base" pos="1 -0.3 1" axisangle="0 1 0 -0.3925">
             <joint name="puck_x" type="slide" axis="1 0 0" damping="0.005" limited="false"/>
             <joint name="puck_y" type="slide" axis="0 1 0" damping="0.005" limited="false"/>
             <joint name="puck_yaw" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>

@@ -635,6 +635,10 @@ class MjData(metaclass=_MjDataMeta):
         """
         bid = self.model.body_name2id(name)
         return self.xpos[bid]
+    
+    def set_body_xpos(self, name, pos):
+        bid = self.model.body_name2id(name)
+        self.xpos[bid] = pos
 
     def get_body_xquat(self, name):
         """

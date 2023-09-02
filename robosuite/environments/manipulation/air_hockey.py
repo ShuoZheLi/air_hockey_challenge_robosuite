@@ -4,13 +4,13 @@ import numpy as np
 
 from robosuite.environments.manipulation.single_arm_env import SingleArmEnv
 from robosuite.models.arenas import AirHockeyTableArena
-from robosuite.models.objects import BoxObject
+from robosuite.models.objects import BoxObject, CylinderObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.mjcf_utils import CustomMaterial
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler
 from robosuite.utils.transform_utils import convert_quat
-
+from robosuite.utils.mjmod import DynamicsModder
 
 class AirHockey(SingleArmEnv):
     """
@@ -180,6 +180,8 @@ class AirHockey(SingleArmEnv):
         # object placement initializer
         self.placement_initializer = placement_initializer
 
+        
+
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -234,6 +236,33 @@ class AirHockey(SingleArmEnv):
         """
         reward = 0.0
 
+        # print(self.sim.data.model._body_name2id.keys())
+        # print(self.sim.data.get_body_xpos("puck"))
+
+
+        # self.modder = DynamicsModder(sim=self.sim)
+        # self.modder.mod_position("puck", [1, -0.3, 1])
+        # self.modder.mod_position("puck_main", [1, -0.3, 1])
+        # self.modder.update() 
+
+        # body_id = self.sim.model.body_name2id("puck_main")
+        # print(self.sim.model.body_pos[body_id])
+
+        print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
+        print("puck_y pos:", self.sim.data.get_joint_qpos("puck_y"))
+        print("puck_yaw pos:", self.sim.data.get_joint_qpos("puck_yaw"))
+
+        # print(self.sim.data.joint_names)
+        # print(self.sim.model.joint_names)
+
+        self.sim.data.set_joint_qpos("puck_x", 0)
+        self.sim.data.set_joint_qpos("puck_y", 0)
+        self.sim.data.set_joint_qpos("puck_yaw", 0)
+
+
+        # self.sim.data.set_body_xpos("puck", [0.996, -0.300, 0.998])
+        self.sim.forward()
+
         # sparse completion reward
         if self._check_success():
             reward = 2.25
@@ -279,21 +308,38 @@ class AirHockey(SingleArmEnv):
         mujoco_arena.set_origin([0, 0, 0])
 
         # initialize objects of interest
-        # tex_attrib = {
-        #     "type": "cube",
-        # }
-        # mat_attrib = {
-        #     "texrepeat": "1 1",
-        #     "specular": "0.4",
-        #     "shininess": "0.1",
-        # }
-        # redwood = CustomMaterial(
-        #     texture="WoodRed",
-        #     tex_name="redwood",
-        #     mat_name="redwood_mat",
-        #     tex_attrib=tex_attrib,
-        #     mat_attrib=mat_attrib,
-        # )
+        tex_attrib = {
+            "type": "cube",
+        }
+        mat_attrib = {
+            "texrepeat": "1 1",
+            "specular": "0.4",
+            "shininess": "0.1",
+        }
+        redwood = CustomMaterial(
+            texture="WoodRed",
+            tex_name="redwood",
+            mat_name="redwood_mat",
+            tex_attrib=tex_attrib,
+            mat_attrib=mat_attrib,
+        )
+
+        # <joint name="puck_x" type="slide" axis="1 0 0" damping="0.005" limited="false"/>
+        #     <joint name="puck_y" type="slide" axis="0 1 0" damping="0.005" limited="false"/>
+        #     <joint name="puck_yaw" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>
+
+        self.puck = CylinderObject(
+            name="puck",
+            size=[0.03165, 0.003],
+            rgba=[1, 0, 0, 1],
+            # joints = [
+            #         {"name":"puck_x", "type":"slide", "axis":"1 0 0", "damping":"0.005", "limited":"false"},
+            #         {"name":"puck_y", "type":"slide", "axis":"0 1 0", "damping":"0.005", "limited":"false"},
+            #         {"name":"puck_yaw", "type":"hinge", "axis":"0 0 1", "damping":"2e-6", "limited":"false"},
+            #         ]
+
+        )
+
         # self.cube = BoxObject(
         #     name="cube",
         #     size_min=[0.020, 0.020, 0.020],  # [0.015, 0.015, 0.015],
@@ -303,27 +349,29 @@ class AirHockey(SingleArmEnv):
         # )
 
         # # Create placement initializer
-        # if self.placement_initializer is not None:
-        #     self.placement_initializer.reset()
-        #     self.placement_initializer.add_objects(self.cube)
-        # else:
-        #     self.placement_initializer = UniformRandomSampler(
-        #         name="ObjectSampler",
-        #         mujoco_objects=self.cube,
-        #         x_range=[-0.03, 0.03],
-        #         y_range=[-0.03, 0.03],
-        #         rotation=None,
-        #         ensure_object_boundary_in_range=False,
-        #         ensure_valid_placement=True,
-        #         reference_pos=self.table_offset,
-        #         z_offset=0.01,
-        #     )
+        if self.placement_initializer is not None:
+            self.placement_initializer.reset()
+            self.placement_initializer.add_objects(self.puck)
+        else:
+            self.placement_initializer = UniformRandomSampler(
+                name="ObjectSampler",
+                mujoco_objects=self.puck,
+                x_range=[-0.03, 0.03],
+                y_range=[-0.03, 0.03],
+                rotation=None,
+                ensure_object_boundary_in_range=False,
+                ensure_valid_placement=True,
+                reference_pos=self.table_offset,
+                z_offset=0.01,
+            )
+
+        # print("self.cube: ", self.cube)
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
             mujoco_arena=mujoco_arena,
             mujoco_robots=[robot.robot_model for robot in self.robots],
-            # mujoco_objects=self.cube,
+            mujoco_objects=self.puck,
         )
 
     def _setup_references(self):
@@ -389,14 +437,25 @@ class AirHockey(SingleArmEnv):
         super()._reset_internal()
 
         # Reset all object positions using initializer sampler if we're not directly loading from an xml
-        # if not self.deterministic_reset:
+        if not self.deterministic_reset:
 
             # Sample from the placement initializer for all objects
-            # object_placements = self.placement_initializer.sample()
+            object_placements = self.placement_initializer.sample()
+
+            
+            # self.sim.data.set_joint_qpos('puck_x', np.concatenate([np.array([1, 0, 1]), np.array([0,0,0,0])]))
+            # self.sim.data.set_joint_qpos('puck_x', 1)
+            # self.sim.data.set_joint_qpos('puck_y', 0)
+            # self.sim.data.set_joint_qpos('puck_yaw', 2)
+
+            # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
 
             # Loop through all objects and reset their positions
             # for obj_pos, obj_quat, obj in object_placements.values():
-            #     self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                # self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                # self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array([1, -0.3, 1]), np.array(obj_quat)]))
+            #     # print("obj.joints: ",obj.joints[0])
+            #     self.sim.data.set_joint_qpos('puck_x', np.concatenate([np.array([1, 0, 1]), np.array(obj_quat)]))
 
     def visualize(self, vis_settings):
         """
