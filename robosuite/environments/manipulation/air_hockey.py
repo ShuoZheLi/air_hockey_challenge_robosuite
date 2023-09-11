@@ -180,7 +180,7 @@ class AirHockey(SingleArmEnv):
         # object placement initializer
         self.placement_initializer = placement_initializer
 
-        
+        gripper_types = "WipingGripper"
 
         super().__init__(
             robots=robots,
@@ -248,20 +248,20 @@ class AirHockey(SingleArmEnv):
         # body_id = self.sim.model.body_name2id("puck_main")
         # print(self.sim.model.body_pos[body_id])
 
-        print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
-        print("puck_y pos:", self.sim.data.get_joint_qpos("puck_y"))
-        print("puck_yaw pos:", self.sim.data.get_joint_qpos("puck_yaw"))
+        # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
+        # print("puck_y pos:", self.sim.data.get_joint_qpos("puck_y"))
+        # print("puck_yaw pos:", self.sim.data.get_joint_qpos("puck_yaw"))
 
         # print(self.sim.data.joint_names)
         # print(self.sim.model.joint_names)
 
-        self.sim.data.set_joint_qpos("puck_x", 0)
-        self.sim.data.set_joint_qpos("puck_y", 0)
-        self.sim.data.set_joint_qpos("puck_yaw", 0)
+        # self.sim.data.set_joint_qpos("puck_x", 0)
+        # self.sim.data.set_joint_qpos("puck_y", 0)
+        # self.sim.data.set_joint_qpos("puck_yaw", 0)
 
 
         # self.sim.data.set_body_xpos("puck", [0.996, -0.300, 0.998])
-        self.sim.forward()
+        # self.sim.forward()
 
         # sparse completion reward
         if self._check_success():

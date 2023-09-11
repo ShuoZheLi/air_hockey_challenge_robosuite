@@ -41,7 +41,7 @@
     <worldbody>
         <!-- <body name="table" axisangle="0 1 0 -0.3925" pos="0.15 0 0.3"> -->
         <!-- <body name="table" axisangle="0 1 0 -0.3925" pos="1 0 1"> -->
-        <body name="table" pos="1 0 1" axisangle="0 1 0 -0.3925">
+        <body name="table" pos="0.8 0 1.2" axisangle="0 1 0 -0.26">
             <body name="table_surface">
                 <!-- <geom name="surface" type="box" material="white" size="1.064 0.609 0.0505" pos="0 0 -0.0505"
                       condim="4" friction="0.08 0.08 0.0" priority="1"
@@ -84,7 +84,7 @@
         </body>
 
         <!-- <body name="base" pos="0.15 0 0.3" axisangle="0 1 0 -0.3925"> -->
-        <body name="base" pos="1 -0.3 1" axisangle="0 1 0 -0.3925">
+        <body name="base" pos="0.8 -0.3 1.2" axisangle="0 1 0 -0.26">
             <joint name="puck_x" type="slide" axis="1 0 0" damping="0.005" limited="false"/>
             <joint name="puck_y" type="slide" axis="0 1 0" damping="0.005" limited="false"/>
             <joint name="puck_yaw" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>
