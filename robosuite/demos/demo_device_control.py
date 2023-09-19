@@ -159,6 +159,8 @@ if __name__ == "__main__":
         hard_reset=False,
     )
 
+    print("config: ", config)
+
     # Wrap this environment in a visualization wrapper
     env = VisualizationWrapper(env, indicator_configs=None)
 

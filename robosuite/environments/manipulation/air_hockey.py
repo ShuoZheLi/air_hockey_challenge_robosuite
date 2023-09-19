@@ -12,6 +12,10 @@ from robosuite.utils.placement_samplers import UniformRandomSampler
 from robosuite.utils.transform_utils import convert_quat
 from robosuite.utils.mjmod import DynamicsModder
 
+import xml.etree.ElementTree as ET
+from copy import deepcopy
+from robosuite.utils.mjcf_utils import new_body, new_geom, new_site
+
 class AirHockey(SingleArmEnv):
     """
     This class corresponds to the lifting task for a single robot arm.
@@ -209,6 +213,8 @@ class AirHockey(SingleArmEnv):
             renderer_config=renderer_config,
         )
 
+        
+
     # function bank
     # towards robot negative
     # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
@@ -268,10 +274,26 @@ class AirHockey(SingleArmEnv):
 
         eef_ori = self.sim.data.get_body_xquat("gripper0_eef")
         eef_angle = self.quat2axisangle([eef_ori[1],eef_ori[2],eef_ori[3], eef_ori[0]])/math.pi*180
+
+        # COM_indicator_config = {
+        #     "name": "indicator1",
+        #     "type": "sphere",
+        #     "size": [5],
+        #     "rgba": [1, 1, 1, 1],
+        #     "pos":[0,0,4],
+        # }
+        # self.indicator_configs = []
+        # self.indicator_configs.append(COM_indicator_config)
+        # self.set_xml_processor(processor=self._add_indicators_to_model)
+
+        # self.modder = DynamicsModder(sim=self.sim)
+
+        # self.modder.mod_position("indicator1_body", [0,0,2])
+        # self.modder.update()
         # print(eef_angle)
 
         # gripper0_wiping_gripper position
-        print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
+        # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
        
 
         # print("self.sim.model.body_name2id: ", self.sim.model._body_name2id.keys())
@@ -324,7 +346,7 @@ class AirHockey(SingleArmEnv):
 
         # Adjust base pose accordingly
         xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
-        print("xpos: ", xpos)
+        # print("xpos: ", xpos)
         xpos = (-0.32,0,0)
         self.robots[0].robot_model.set_base_xpos(xpos)
 
@@ -460,6 +482,8 @@ class AirHockey(SingleArmEnv):
             #     )
 
         return observables
+    
+    
 
     def _reset_internal(self):
         """
@@ -467,11 +491,21 @@ class AirHockey(SingleArmEnv):
         """
         super()._reset_internal()
 
+        
+
+        
+
+        print("reset is called")
+
+
+        
+
+
         # Reset all object positions using initializer sampler if we're not directly loading from an xml
-        if not self.deterministic_reset:
+        # if not self.deterministic_reset:
 
             # Sample from the placement initializer for all objects
-            object_placements = self.placement_initializer.sample()
+            # object_placements = self.placement_initializer.sample()
 
             
             # self.sim.data.set_joint_qpos('puck_x', np.concatenate([np.array([1, 0, 1]), np.array([0,0,0,0])]))

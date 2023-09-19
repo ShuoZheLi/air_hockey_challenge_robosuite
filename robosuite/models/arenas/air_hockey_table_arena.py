@@ -49,8 +49,8 @@ class AirHockeyTableArena(Arena):
         #     self.table_body.find("./geom[@name='table_leg3_visual']"),
         #     self.table_body.find("./geom[@name='table_leg4_visual']"),
         # ]
-        print("self.floor: ", self.floor)
-        print("self.table_body: ", self.table_body)
+        # print("self.floor: ", self.floor)
+        # print("self.table_body: ", self.table_body)
         self.configure_location()
         # pass
 
@@ -60,7 +60,7 @@ class AirHockeyTableArena(Arena):
 
         # self.table_body.set("pos", array_to_string(self.center_pos))
         # self.table_body.set("pos", array_to_string([0,0,-5]))
-        print("table_body pos: ", self.table_body.get("pos"))
+        # print("table_body pos: ", self.table_body.get("pos"))
         # self.table_collision.set("size", array_to_string(self.table_half_size))
         # self.table_collision.set("friction", array_to_string(self.table_friction))
         # self.table_visual.set("size", array_to_string(self.table_half_size))
