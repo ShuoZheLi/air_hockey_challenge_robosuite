@@ -101,7 +101,7 @@
         <site name="puck_vis_rot" type="cylinder" size="0.0045 0.006" rgba="1 0 0 1" pos="0 0 -0.05"/>
 
         <!-- front view -->
-        <camera mode="fixed" name="frontview" pos="1.6 0 1.45" quat="0.56 0.43 0.43 0.56"/>
+        <camera mode="fixed" name="frontview" pos="1 0 1.45" quat="0.56 0.43 0.43 0.56"/>
         <!-- bird view -->
         <camera mode="fixed" name="birdview" pos="-0.2 0 7.0" quat="0.7071 0 0 0.7071"/>
         <!-- agent view -->

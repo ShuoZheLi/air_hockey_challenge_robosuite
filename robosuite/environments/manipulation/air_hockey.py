@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import numpy as np
-
+import math
 from robosuite.environments.manipulation.single_arm_env import SingleArmEnv
 from robosuite.models.arenas import AirHockeyTableArena
 from robosuite.models.objects import BoxObject, CylinderObject
@@ -209,6 +209,29 @@ class AirHockey(SingleArmEnv):
             renderer_config=renderer_config,
         )
 
+    # function bank
+    # towards robot negative
+    # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
+    # -left, +right
+    # print("puck_y pos:", self.sim.data.get_joint_qpos("puck_y"))
+    # print("puck_yaw pos:", self.sim.data.get_joint_qpos("puck_yaw"))
+
+    # set puck position in sim
+    # self.sim.data.set_joint_qpos("puck_x", 0)
+    # self.sim.data.set_joint_qpos("puck_y", 0)
+    # self.sim.data.set_joint_qpos("puck_yaw", 0)
+    # self.sim.data.set_body_xpos("puck", [0.996, -0.300, 0.998])
+    # self.sim.forward()
+
+    # print(self.sim.data.model._body_name2id.keys())
+    # self.modder = DynamicsModder(sim=self.sim)
+    # self.modder.mod_position("puck", [1, -0.3, 1])
+    # self.modder.mod_position("puck_main", [1, -0.3, 1])
+    # self.modder.update()  
+
+    # gripper position
+    # print(self.sim.data.site_xpos[self.robots[0].eef_site_id])
+
     def reward(self, action=None):
         """
         Reward function for the task.
@@ -236,36 +259,42 @@ class AirHockey(SingleArmEnv):
         """
         reward = 0.0
 
-        # print(self.sim.data.model._body_name2id.keys())
+        # print(self.sim.model._site_name2id.keys())
+
+        # print(self.sim.model._site_name2id.keys())
+
+        # 
         # print(self.sim.data.get_body_xpos("puck"))
 
+        eef_ori = self.sim.data.get_body_xquat("gripper0_eef")
+        eef_angle = self.quat2axisangle([eef_ori[1],eef_ori[2],eef_ori[3], eef_ori[0]])/math.pi*180
+        # print(eef_angle)
 
-        # self.modder = DynamicsModder(sim=self.sim)
-        # self.modder.mod_position("puck", [1, -0.3, 1])
-        # self.modder.mod_position("puck_main", [1, -0.3, 1])
-        # self.modder.update() 
+        # gripper0_wiping_gripper position
+        print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
+       
 
-        # body_id = self.sim.model.body_name2id("puck_main")
+        # print("self.sim.model.body_name2id: ", self.sim.model._body_name2id.keys())
+        # print("self.sim.model.joint_name2id: ", self.sim.model._joint_name2id.keys())
+
+        # body_id = self.sim.model.body_name2id("puck")
         # print(self.sim.model.body_pos[body_id])
 
-        # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
-        # print("puck_y pos:", self.sim.data.get_joint_qpos("puck_y"))
-        # print("puck_yaw pos:", self.sim.data.get_joint_qpos("puck_yaw"))
+        # joint_id=  self.sim.model.joint_name2id("puck_joint0")
+        # print(self.sim.model.joint_pos[joint_id])
+
+        
+
+        # print("puck_joint0 pos:", self.sim.data.get_joint_qpos("puck_joint0"))
 
         # print(self.sim.data.joint_names)
         # print(self.sim.model.joint_names)
 
-        # self.sim.data.set_joint_qpos("puck_x", 0)
-        # self.sim.data.set_joint_qpos("puck_y", 0)
-        # self.sim.data.set_joint_qpos("puck_yaw", 0)
-
-
-        # self.sim.data.set_body_xpos("puck", [0.996, -0.300, 0.998])
-        # self.sim.forward()
+        
 
         # sparse completion reward
-        if self._check_success():
-            reward = 2.25
+        # if self._check_success():
+        #     reward = 2.25
 
         # use a shaping reward
         # elif self.reward_shaping:
@@ -295,6 +324,8 @@ class AirHockey(SingleArmEnv):
 
         # Adjust base pose accordingly
         xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+        print("xpos: ", xpos)
+        xpos = (-0.32,0,0)
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace
@@ -486,3 +517,28 @@ class AirHockey(SingleArmEnv):
         # # cube is higher than the table top above a margin
         # return cube_height > table_height + 0.04
         return False
+    
+    def quat2axisangle(self, quat):
+        """
+        Converts quaternion to axis-angle format.
+        Returns a unit vector direction scaled by its angle in radians.
+
+        Args:
+            quat (np.array): (x,y,z,w) vec4 float angles
+
+        Returns:
+            np.array: (ax,ay,az) axis-angle exponential coordinates
+        """
+        quat = np.array(quat)
+        # clip quaternion
+        if quat[3] > 1.0:
+            quat[3] = 1.0
+        elif quat[3] < -1.0:
+            quat[3] = -1.0
+
+        den = np.sqrt(1.0 - quat[3] * quat[3])
+        if math.isclose(den, 0.0):
+            # This is (close to) a zero degree rotation, immediately return
+            return np.zeros(3)
+
+        return (quat[:3] * 2.0 * math.acos(quat[3])) / den
