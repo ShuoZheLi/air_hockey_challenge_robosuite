@@ -186,6 +186,8 @@ class AirHockey(SingleArmEnv):
 
         gripper_types = "WipingGripper"
 
+        self.arm_limit_collision_penalty = -10
+
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -337,6 +339,74 @@ class AirHockey(SingleArmEnv):
             reward *= self.reward_scale / 2.25
 
         return reward
+    
+    def _post_action(self, action):
+        """
+        In addition to super method, add additional info if requested
+
+        Args:
+            action (np.array): Action to execute within the environment
+
+        Returns:
+            3-tuple:
+
+                - (float) reward from the environment
+                - (bool) whether the current episode is completed or not
+                - (dict) info about current env step
+        """
+        reward, done, info = super()._post_action(action)
+
+        
+        done, reward = self._check_terminated(done, reward, info)
+
+        return reward, done, info
+    
+    def _check_terminated(self, done, reward, info):
+        """
+        Check if the task has completed one way or another. The following conditions lead to termination:
+
+            - Collision
+            - Task completion (pushing succeeded)
+            - Joint Limit reached
+
+        Returns:
+            bool: True if episode is terminated
+        """
+
+        # terminated = False
+
+        # Prematurely terminate if contacting the table with the arm
+        if self.check_contact(self.robots[0].robot_model):
+            reward = self.arm_limit_collision_penalty
+            print("arm collision happens")
+            info["terminated_reason"] = "arm_hit_table"
+            done = True
+
+        if self.check_contact("gripper0_hand_collision"):
+            print(self.check_contact("gripper0_hand_collision"))
+            reward = self.arm_limit_collision_penalty
+            print("gripper hand collision happens")
+            info["terminated_reason"] = "gripper_hit_table"
+            done = True
+        
+        if self.robots[0].check_q_limits():
+            reward = self.arm_limit_collision_penalty
+            print("reach joint limits")
+            info["terminated_reason"] = "arm_limit"
+            done = True
+        
+
+        # if np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])) >= 100:
+        #     print("too much force: ", np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])))
+        #     reward = self.arm_limit_collision_penalty
+        #     done = True
+
+        # Prematurely terminate if task is success
+        if self._check_success():
+            print("success")
+            done = True
+
+        return done, reward
 
     def _load_model(self):
         """
@@ -495,7 +565,7 @@ class AirHockey(SingleArmEnv):
 
         
 
-        print("reset is called")
+        # print("reset is called")
 
 
         

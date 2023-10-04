@@ -7,7 +7,9 @@ from robosuite.wrappers import GymWrapper
 config = {'env_name': 'AirHockey', 
           'robots': ['UR5e'], 
           'controller_configs': 
-          {'type': 'OSC_POSE', 'interpolation': None, "impedance_mode" : "fixed"}, 
+                {'type': 'OSC_POSITION', 
+                'interpolation': None, 
+                "impedance_mode" : "fixed"}, 
         'gripper_types': 'Robotiq85Gripper',}
 
 env = suite.make(
@@ -29,7 +31,7 @@ while True:
     # action = np.append(action, [100,100,100])
     # action = np.array([0.,  0.,  0.,  0.,  0.,  0., -1., -1., -1, 0.,  0.,  0.,])
 
-    action = np.array([0.,  0.,  0.,  0.,  0.,  0.])
+    action = np.array([0.,  0.,  0.])
     # print("action: ", action)
     obs, reward, done, info, _= env.step(action)
     # print(env.step(action))

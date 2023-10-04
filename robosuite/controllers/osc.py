@@ -113,8 +113,10 @@ class OperationalSpaceController(Controller):
         actuator_range,
         input_max=1,
         input_min=-1,
-        output_max=(0.05, 0.05, 0.05, 0.5, 0.5, 0.5),
-        output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
+        # output_max=(0.05, 0.05, 0.05, 0.5, 0.5, 0.5),
+        # output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
+        output_max=0.5,
+        output_min=-0.5,
         kp=150,
         damping_ratio=1,
         impedance_mode="fixed",
@@ -274,6 +276,8 @@ class OperationalSpaceController(Controller):
                 orientation_error(self.goal_ori, self.ori_ref)
             )  # goal is the total orientation error
             self.relative_ori = np.zeros(3)  # relative orientation always starts at 0
+
+        self.goal_ori = trans.euler2mat(np.array([-3.1397173,   0.26, -1.5160433]))
 
     def run_controller(self):
         """
