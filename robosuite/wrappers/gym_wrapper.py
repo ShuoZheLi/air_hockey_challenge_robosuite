@@ -134,7 +134,7 @@ class GymWrapper(Wrapper, gym.Env):
         self.indicator_configs.append(COM_indicator_config)
         self.env.set_xml_processor(processor=self._add_indicators_to_model)
 
-        ob_dict = self.env.reset()
+        ob_dict = self.env.reset(goal_pos)
         return self._flatten_obs(ob_dict), {}
 
     def step(self, action):

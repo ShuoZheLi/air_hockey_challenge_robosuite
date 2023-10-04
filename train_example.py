@@ -22,23 +22,13 @@ env = suite.make(
     )
 
 env = GymWrapper(env)
-
-print("env.action_spec: ", env.action_spec)
-env.reset()
+x_pos = 0.02
+env.reset(goal_pos=[x_pos, 0, 0.99 + np.tan(0.26) * x_pos])
 
 while True:
-    # action = env.action_space.sample()
-    # action = np.append(action, [100,100,100])
-    # action = np.array([0.,  0.,  0.,  0.,  0.,  0., -1., -1., -1, 0.,  0.,  0.,])
-
-    action = np.array([0.,  0.,  0.])
-    # print("action: ", action)
+    action = np.array([0.,  0.,  -0.001])
     obs, reward, done, info, _= env.step(action)
-    # print(env.step(action))
-    # print("obs: ", obs)
-    # print("reward: ", reward)
-    # print("done: ", done)
-    # print("info: ", info)
     env.render()
-    # if done:
-    #     break
+    if done:
+        x_pos = 0.02
+        env.reset(goal_pos=[x_pos, 0, 0.99 + np.tan(0.26) * x_pos])
