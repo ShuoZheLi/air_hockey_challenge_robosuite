@@ -278,6 +278,8 @@ class OperationalSpaceController(Controller):
             self.relative_ori = np.zeros(3)  # relative orientation always starts at 0
 
         self.goal_ori = trans.euler2mat(np.array([-3.1397173,   0.26, -1.5160433]))
+        # print("self.goal_pos", self.goal_pos)
+        self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.985
 
     def run_controller(self):
         """
