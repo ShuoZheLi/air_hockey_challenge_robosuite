@@ -21,14 +21,28 @@ env = suite.make(
         control_freq=20,
     )
 
-env = GymWrapper(env)
+env = GymWrapper(env, keys=['robot0_joint_pos_cos', 
+                            'robot0_joint_pos_sin', 
+                            'robot0_joint_vel',
+                            'robot0_eef_pos'
+                            ])
+
+
+
+# state dim = 21, all between -1 to 1, except eef_pos
+# action dim = 3, should be 2, just put 0 into z-axis
+# delta position
 x_pos = 0.02
-env.reset(goal_pos=[x_pos, 0, 0.99 + np.tan(0.26) * x_pos])
+y_pos = 0
+goal_z = lambda x_pos: 0.99 + np.tan(0.26) * x_pos
+env.reset(goal_pos=[x_pos, y_pos, goal_z(x_pos)])
 
 while True:
-    action = np.array([0.,  0.,  -0.001])
+    action = np.array([0.,  0.,  0])
     obs, reward, done, info, _= env.step(action)
     env.render()
     if done:
         x_pos = 0.02
-        env.reset(goal_pos=[x_pos, 0, 0.99 + np.tan(0.26) * x_pos])
+        y_pos = 0
+        goal_z = lambda x_pos: 0.99 + np.tan(0.26) * x_pos
+        env.reset(goal_pos=[x_pos, y_pos, goal_z(x_pos)])
