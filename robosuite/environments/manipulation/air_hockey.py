@@ -143,6 +143,7 @@ class AirHockey(SingleArmEnv):
         env_configuration="default",
         controller_configs=None,
         gripper_types="default",
+        initial_qpos=[-0.623, -1.256, 2.431, -2.959, -1.420, -2.122],
         initialization_noise="default",
         table_full_size=(0.8, 0.8, 0.05),
         table_friction=(1.0, 5e-3, 1e-4),
@@ -196,6 +197,7 @@ class AirHockey(SingleArmEnv):
             controller_configs=controller_configs,
             mount_types="default",
             gripper_types=gripper_types,
+            initial_qpos=[-0.573, -1.234, 2.708, -3.377, -1.386, -2.061],
             initialization_noise=initialization_noise,
             use_camera_obs=use_camera_obs,
             has_renderer=has_renderer,
@@ -271,6 +273,8 @@ class AirHockey(SingleArmEnv):
             float: reward value
         """
         reward = 0.0
+
+        print(self.robots[0]._joint_positions)
 
         # print(self.sim.model._site_name2id.keys())
 
