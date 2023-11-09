@@ -113,8 +113,10 @@ class OperationalSpaceController(Controller):
         actuator_range,
         input_max=1,
         input_min=-1,
-        output_max=(0.05, 0.05, 0.05, 0.5, 0.5, 0.5),
-        output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
+        # output_max=(0.05, 0.05, 0.05, 0.5, 0.5, 0.5),
+        # output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
+        output_max=0.5,
+        output_min=-0.5,
         kp=150,
         damping_ratio=1,
         impedance_mode="fixed",
@@ -179,7 +181,8 @@ class OperationalSpaceController(Controller):
             self.control_dim += 6
 
         # limits
-        self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
+        # self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
+        self.position_limits = np.array([[-0.1,-0.4,-10],[0.5,0.4,10]])
         self.orientation_limits = np.array(orientation_limits) if orientation_limits is not None else orientation_limits
 
         # control frequency
@@ -198,6 +201,8 @@ class OperationalSpaceController(Controller):
 
         self.relative_ori = np.zeros(3)
         self.ori_ref = None
+
+        self.fixed_ori = trans.euler2mat(np.array([-3.1397173,   0.26, -1.5160433]))
 
     def set_goal(self, action, set_pos=None, set_ori=None):
         """
@@ -265,6 +270,10 @@ class OperationalSpaceController(Controller):
             scaled_delta[:3], self.ee_pos, position_limit=self.position_limits, set_pos=set_pos
         )
 
+
+        self.goal_ori = self.fixed_ori
+        self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.985
+
         if self.interpolator_pos is not None:
             self.interpolator_pos.set_goal(self.goal_pos)
 
@@ -274,6 +283,11 @@ class OperationalSpaceController(Controller):
                 orientation_error(self.goal_ori, self.ori_ref)
             )  # goal is the total orientation error
             self.relative_ori = np.zeros(3)  # relative orientation always starts at 0
+
+        # self.goal_ori = self.fixed_ori
+        # print("self.goal_pos", self.goal_pos)
+        # self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.985
+        # self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.95
 
     def run_controller(self):
         """
@@ -302,6 +316,10 @@ class OperationalSpaceController(Controller):
         else:
             desired_pos = np.array(self.goal_pos)
 
+        desired_pos[2] = 0.2685 * desired_pos[0] + 0.985
+        # desired_pos[2] = 0.2685 * desired_pos[0] + 0.95
+        desired_pos = np.clip(desired_pos, self.position_limits[0], self.position_limits[1])
+        
         if self.interpolator_ori is not None:
             # relative orientation based on difference between current ori and ref
             self.relative_ori = orientation_error(self.ee_ori_mat, self.ori_ref)
@@ -368,7 +386,11 @@ class OperationalSpaceController(Controller):
         Resets the goal to the current state of the robot
         """
         self.goal_ori = np.array(self.ee_ori_mat)
+
+        self.goal_ori = self.fixed_ori
         self.goal_pos = np.array(self.ee_pos)
+
+        self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.985
 
         # Also reset interpolators if required
 

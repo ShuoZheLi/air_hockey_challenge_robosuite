@@ -52,6 +52,13 @@ class VisualizationWrapper(Wrapper):
             seg is None for seg in env.camera_segmentations
         ), "Cannot use camera segmentations with visualization wrapper!"
 
+        keys=['robot0_joint_pos_cos', 
+                            'robot0_joint_pos_sin', 
+                            'robot0_joint_vel',
+                            'robot0_eef_pos'
+                            ]
+        self.keys = keys
+
         # Standardize indicator configs
         self.indicator_configs = None
         if indicator_configs is not None:
@@ -130,17 +137,77 @@ class VisualizationWrapper(Wrapper):
         )
         self._vis_settings[setting] = visible
 
-    def reset(self):
+    def _flatten_obs(self, obs_dict, verbose=False):
         """
-        Extends vanilla reset() function call to accommodate visualization
+        Filters keys of interest out and concatenate the information.
+
+        Args:
+            obs_dict (OrderedDict): ordered dictionary of observations
+            verbose (bool): Whether to print out to console as observation keys are processed
 
         Returns:
-            OrderedDict: Environment observation space after reset occurs
+            np.array: observations flattened into a 1d array
         """
-        ret = super().reset()
-        # Update any visualization
+        ob_lst = []
+        for key in self.keys:
+            if key in obs_dict:
+                if verbose:
+                    print("adding key: {}".format(key))
+                ob_lst.append(np.array(obs_dict[key]).flatten())
+        return np.concatenate(ob_lst)
+
+    def _add_indicators_to_model(self, xml):
+        """
+        Adds indicators to the mujoco simulation model
+
+        Args:
+            xml (string): MJCF model in xml format, for the current simulation to be loaded
+        """
+        if self.indicator_configs is not None:
+            root = ET.fromstring(xml)
+            worldbody = root.find("worldbody")
+
+            for indicator_config in self.indicator_configs:
+                config = deepcopy(indicator_config)
+                print(config["name"] + "_body", config)
+                indicator_body = new_body(name=config["name"] + "_body")
+                indicator_body.append(new_site(**config))
+                worldbody.append(indicator_body)
+
+            xml = ET.tostring(root, encoding="utf8").decode("utf8")
+
+        return xml
+
+    def reset(self, seed=None, options=None, goal_pos=[0,0,1], axisangle=[0, 1, 0, -0.26]):
+        """
+        Extends env reset method to return flattened observation instead of normal OrderedDict and optionally resets seed
+
+        Returns:
+            np.array: Flattened environment observation space after reset occurs
+        """
+        if seed is not None:
+            if isinstance(seed, int):
+                np.random.seed(seed)
+            else:
+                raise TypeError("Seed must be an integer type!")
+        
+        COM_indicator_config = {
+            "name": "indicator1",
+            "type": "box",
+            "size": [0.02,0.02],
+            "rgba": [1, 0, 0, 1],
+            "pos": goal_pos,
+            "axisangle": axisangle,
+        }
+        self.indicator_configs = []
+        self.indicator_configs.append(COM_indicator_config)
+        self.env.set_xml_processor(processor=self._add_indicators_to_model)
+
+        ob_dict = self.env.reset(goal_pos)
+        self.set_indicator_pos("indicator1", goal_pos)
         self.env.visualize(vis_settings=self._vis_settings)
-        return ret
+        return self._flatten_obs(ob_dict), {}
+
 
     def step(self, action):
         """
@@ -157,30 +224,10 @@ class VisualizationWrapper(Wrapper):
                 - (bool) whether the current episode is completed or not
                 - (dict) misc information
         """
-        ret = super().step(action)
+        ob_dict, reward, terminated, info = self.env.step(action)
 
         # Update any visualization
         self.env.visualize(vis_settings=self._vis_settings)
 
-        return ret
+        return self._flatten_obs(ob_dict), reward, terminated, False, info
 
-    def _add_indicators_to_model(self, xml):
-        """
-        Adds indicators to the mujoco simulation model
-
-        Args:
-            xml (string): MJCF model in xml format, for the current simulation to be loaded
-        """
-        if self.indicator_configs is not None:
-            root = ET.fromstring(xml)
-            worldbody = root.find("worldbody")
-
-            for indicator_config in self.indicator_configs:
-                config = deepcopy(indicator_config)
-                indicator_body = new_body(name=config["name"] + "_body", pos=config.pop("pos", (0, 0, 0)))
-                indicator_body.append(new_site(**config))
-                worldbody.append(indicator_body)
-
-            xml = ET.tostring(root, encoding="utf8").decode("utf8")
-
-        return xml

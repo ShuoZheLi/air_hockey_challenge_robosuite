@@ -103,6 +103,13 @@ from robosuite import load_controller_config
 from robosuite.utils.input_utils import input2action
 from robosuite.wrappers import VisualizationWrapper
 
+def sample_goal():
+    x = np.random.uniform(0.0, 0.4)
+    y = np.random.uniform(-0.4,0.4)
+    z = lambda x_pos: 0.99 + np.tan(0.26) * x_pos
+    return [x,y,z(x)]
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -159,6 +166,8 @@ if __name__ == "__main__":
         hard_reset=False,
     )
 
+    print("config: ", config)
+
     # Wrap this environment in a visualization wrapper
     env = VisualizationWrapper(env, indicator_configs=None)
 
@@ -182,7 +191,8 @@ if __name__ == "__main__":
 
     while True:
         # Reset the environment
-        obs = env.reset()
+        goal = sample_goal()
+        obs = env.reset(goal_pos=goal)
 
         # Setup rendering
         cam_id = 0
@@ -195,6 +205,8 @@ if __name__ == "__main__":
         # Initialize device control
         device.start_control()
 
+        # total reward for this trajectory, resets if greater than 10
+        reached_reward = 0
         while True:
             # Set active robot
             active_robot = env.robots[0] if args.config == "bimanual" else env.robots[args.arm == "left"]
@@ -240,5 +252,11 @@ if __name__ == "__main__":
                 action = action[: env.action_dim]
 
             # Step through the simulation and render
-            obs, reward, done, info = env.step(action)
+            obs, reward, done, trunc, info = env.step(action)
+            reached_reward += reward
+            print(obs, reward, goal)
             env.render()
+
+            # if at the goal for a while, reset
+            if reached_reward > 10:
+                break

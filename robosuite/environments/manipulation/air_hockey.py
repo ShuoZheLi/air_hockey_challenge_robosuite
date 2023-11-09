@@ -12,6 +12,10 @@ from robosuite.utils.placement_samplers import UniformRandomSampler
 from robosuite.utils.transform_utils import convert_quat
 from robosuite.utils.mjmod import DynamicsModder
 
+import xml.etree.ElementTree as ET
+from copy import deepcopy
+from robosuite.utils.mjcf_utils import new_body, new_geom, new_site
+
 class AirHockey(SingleArmEnv):
     """
     This class corresponds to the lifting task for a single robot arm.
@@ -139,6 +143,7 @@ class AirHockey(SingleArmEnv):
         env_configuration="default",
         controller_configs=None,
         gripper_types="default",
+        initial_qpos=[-0.623, -1.256, 2.431, -2.959, -1.420, -2.122],
         initialization_noise="default",
         table_full_size=(0.8, 0.8, 0.05),
         table_friction=(1.0, 5e-3, 1e-4),
@@ -182,12 +187,17 @@ class AirHockey(SingleArmEnv):
 
         gripper_types = "WipingGripper"
 
+        self.arm_limit_collision_penalty = -10
+        self.success_reward = 1
+        self.goal_pos = [0,0,1]
+
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
             controller_configs=controller_configs,
             mount_types="default",
             gripper_types=gripper_types,
+            initial_qpos=[-0.573, -1.234, 2.708, -3.377, -1.386, -2.061],
             initialization_noise=initialization_noise,
             use_camera_obs=use_camera_obs,
             has_renderer=has_renderer,
@@ -209,7 +219,12 @@ class AirHockey(SingleArmEnv):
             renderer_config=renderer_config,
         )
 
-    # function bank
+    
+    def reset(self, goal_pos=[0,0,1]):
+        self.goal_pos = goal_pos
+        return super().reset()
+
+    # function bank  
     # towards robot negative
     # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
     # -left, +right
@@ -259,6 +274,8 @@ class AirHockey(SingleArmEnv):
         """
         reward = 0.0
 
+        print(self.robots[0]._joint_positions)
+
         # print(self.sim.model._site_name2id.keys())
 
         # print(self.sim.model._site_name2id.keys())
@@ -266,55 +283,83 @@ class AirHockey(SingleArmEnv):
         # 
         # print(self.sim.data.get_body_xpos("puck"))
 
-        eef_ori = self.sim.data.get_body_xquat("gripper0_eef")
-        eef_angle = self.quat2axisangle([eef_ori[1],eef_ori[2],eef_ori[3], eef_ori[0]])/math.pi*180
-        # print(eef_angle)
+        # eef_ori = self.sim.data.get_body_xquat("gripper0_eef")
+        # eef_angle = self.quat2axisangle([eef_ori[1],eef_ori[2],eef_ori[3], eef_ori[0]])/math.pi*180
+        # print(self.sim.data.site_xpos[self.robots[0].eef_site_id])
 
-        # gripper0_wiping_gripper position
-        print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
-       
+        # print(self.sim.data.get_body_xpos("gripper0_eef"))
 
-        # print("self.sim.model.body_name2id: ", self.sim.model._body_name2id.keys())
-        # print("self.sim.model.joint_name2id: ", self.sim.model._joint_name2id.keys())
-
-        # body_id = self.sim.model.body_name2id("puck")
-        # print(self.sim.model.body_pos[body_id])
-
-        # joint_id=  self.sim.model.joint_name2id("puck_joint0")
-        # print(self.sim.model.joint_pos[joint_id])
-
-        
-
-        # print("puck_joint0 pos:", self.sim.data.get_joint_qpos("puck_joint0"))
-
-        # print(self.sim.data.joint_names)
-        # print(self.sim.model.joint_names)
-
-        
-
-        # sparse completion reward
-        # if self._check_success():
-        #     reward = 2.25
-
-        # use a shaping reward
-        # elif self.reward_shaping:
-
-        #     # reaching reward
-        #     cube_pos = self.sim.data.body_xpos[self.cube_body_id]
-        #     gripper_site_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        #     dist = np.linalg.norm(gripper_site_pos - cube_pos)
-        #     reaching_reward = 1 - np.tanh(10.0 * dist)
-        #     reward += reaching_reward
-
-        #     # grasping reward
-        #     if self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.cube):
-        #         reward += 0.25
-
-        # Scale reward if requested
-        if self.reward_scale is not None:
-            reward *= self.reward_scale / 2.25
+        # print(self.sim.data.site_xpos[self.robots[0].eef_site_id])
 
         return reward
+    
+    def _post_action(self, action):
+        """
+        In addition to super method, add additional info if requested
+
+        Args:
+            action (np.array): Action to execute within the environment
+
+        Returns:
+            3-tuple:
+
+                - (float) reward from the environment
+                - (bool) whether the current episode is completed or not
+                - (dict) info about current env step
+        """
+        reward, done, info = super()._post_action(action)
+
+        
+        done, reward = self._check_terminated(done, reward, info)
+
+        return reward, done, info
+    
+    def _check_terminated(self, done, reward, info):
+        """
+        Check if the task has completed one way or another. The following conditions lead to termination:
+
+            - Collision
+            - Task completion (pushing succeeded)
+            - Joint Limit reached
+
+        Returns:
+            bool: True if episode is terminated
+        """
+
+        # terminated = False
+
+        # Prematurely terminate if contacting the table with the arm
+        if self.check_contact(self.robots[0].robot_model):
+            reward = self.arm_limit_collision_penalty
+            print("arm collision happens")
+            info["terminated_reason"] = "arm_hit_table"
+            done = True
+
+        if self.check_contact("gripper0_hand_collision"):
+            reward = self.arm_limit_collision_penalty
+            print("gripper hand collision happens")
+            info["terminated_reason"] = "gripper_hit_table"
+            done = True
+        
+        if self.robots[0].check_q_limits():
+            reward = self.arm_limit_collision_penalty
+            print("reach joint limits")
+            info["terminated_reason"] = "arm_limit"
+            done = True
+        
+        # if np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])) >= 100:
+        #     print("too much force: ", np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])))
+        #     reward = self.arm_limit_collision_penalty
+        #     done = True
+
+        # Prematurely terminate if task is success
+        if self._check_success():
+            reward = self.success_reward
+            print("success")
+            info["terminated_reason"] = "success"
+            done = True
+
+        return done, reward
 
     def _load_model(self):
         """
@@ -324,7 +369,7 @@ class AirHockey(SingleArmEnv):
 
         # Adjust base pose accordingly
         xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
-        print("xpos: ", xpos)
+        # print("xpos: ", xpos)
         xpos = (-0.32,0,0)
         self.robots[0].robot_model.set_base_xpos(xpos)
 
@@ -460,6 +505,8 @@ class AirHockey(SingleArmEnv):
             #     )
 
         return observables
+    
+    
 
     def _reset_internal(self):
         """
@@ -467,11 +514,21 @@ class AirHockey(SingleArmEnv):
         """
         super()._reset_internal()
 
+        
+
+        
+
+        # print("reset is called")
+
+
+        
+
+
         # Reset all object positions using initializer sampler if we're not directly loading from an xml
-        if not self.deterministic_reset:
+        # if not self.deterministic_reset:
 
             # Sample from the placement initializer for all objects
-            object_placements = self.placement_initializer.sample()
+            # object_placements = self.placement_initializer.sample()
 
             
             # self.sim.data.set_joint_qpos('puck_x', np.concatenate([np.array([1, 0, 1]), np.array([0,0,0,0])]))
@@ -511,12 +568,12 @@ class AirHockey(SingleArmEnv):
         Returns:
             bool: True if cube has been lifted
         """
-        # cube_height = self.sim.data.body_xpos[self.cube_body_id][2]
-        # table_height = self.model.mujoco_arena.table_offset[2]
+        
+        gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
 
-        # # cube is higher than the table top above a margin
-        # return cube_height > table_height + 0.04
-        return False
+        return np.linalg.norm(gripper_pos - self.goal_pos) <= 0.05
+            
+        
     
     def quat2axisangle(self, quat):
         """

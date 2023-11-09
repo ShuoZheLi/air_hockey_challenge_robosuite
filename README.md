@@ -15,4 +15,6 @@ You can test the IK with this command.
 
 If you are adding in new controller, take a look at the code at `robosuite/demos/demo_device_control.py` .
 
+# Plug in RL
 
+    python3 train_example.py
