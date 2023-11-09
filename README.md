@@ -3,9 +3,17 @@
 lol
 
 # Install
-cd into the repo folder
+git clone git@github.com:ShuoZheLi/air_hockey_challenge_robosuite.git
+cd air_hockey_challenge_robosuite
+git checkout -b reaching_policy
+git pull origin reaching_policy
+conda create -n air python=3.9
+pip install -e .
+python3 robosuite/demos/demo_device_control.py --robots UR5e --environment AirHockey
 
-    pip3 install -e .
+<!-- cd into the repo folder
+
+    pip3 install -e . -->
 
 # Testing Your Code
 
