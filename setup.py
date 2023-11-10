@@ -16,5 +16,6 @@ setup(
         "opencv-python",
         "pynput",
         "termcolor",
+        "cython==0.29.32",
     ],
 )
