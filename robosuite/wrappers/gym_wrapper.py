@@ -53,7 +53,8 @@ class GymWrapper(Wrapper, gym.Env):
             for idx in range(len(self.env.robots)):
                 keys += ["robot{}_proprio-state".format(idx)]
         self.keys = keys
-
+        self.render_camera_key = "{}_image".format(self.env.render_camera)
+        
         # Gym specific attributes
         self.env.spec = None
 
@@ -81,7 +82,7 @@ class GymWrapper(Wrapper, gym.Env):
         """
         ob_lst = []
         for key in self.keys:
-            if key in obs_dict:
+            if key in obs_dict and 'image' not in key:
                 if verbose:
                     print("adding key: {}".format(key))
                 ob_lst.append(np.array(obs_dict[key]).flatten())
@@ -135,7 +136,9 @@ class GymWrapper(Wrapper, gym.Env):
         self.env.set_xml_processor(processor=self._add_indicators_to_model)
 
         ob_dict = self.env.reset(goal_pos)
-        return self._flatten_obs(ob_dict), {}
+        render_frame = ob_dict[self.render_camera_key]
+        
+        return self._flatten_obs(ob_dict), {"render_frame":render_frame} #{}
 
     def step(self, action):
         """
@@ -154,7 +157,10 @@ class GymWrapper(Wrapper, gym.Env):
                 - (dict) misc information
         """
         ob_dict, reward, terminated, info = self.env.step(action)
-        return self._flatten_obs(ob_dict), reward, terminated, False, info
+        # print("ob_dict keys:", ob_dict.keys())
+        render_frame = ob_dict[self.render_camera_key]
+        
+        return self._flatten_obs(ob_dict), reward, terminated, False, info, {"render_frame":render_frame}
 
     def compute_reward(self, achieved_goal, desired_goal, info):
         """
