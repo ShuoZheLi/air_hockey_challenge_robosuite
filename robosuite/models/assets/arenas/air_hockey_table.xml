@@ -85,8 +85,11 @@
 
         <!-- <body name="base" pos="0.15 0 0.3" axisangle="0 1 0 -0.3925"> -->
         <body name="base" pos="0.8 -0.3 1.2" axisangle="0 1 0 -0.26">
-            <joint name="puck_x" type="slide" axis="1 0 0" damping="0.005" limited="false"/>
-            <joint name="puck_y" type="slide" axis="0 1 0" damping="0.005" limited="false"/>
+        <!-- <body name="base" pos="0 0 0" axisangle="0 1 0 -0.26"> -->
+            <!-- <joint name="puck_x" type="slide" axis="1 0 0" damping="0.005" limited="false"/> -->
+            <joint name="puck_x" type="slide" axis="1 0 0" damping="0.04" limited="false"/>
+            <!-- <joint name="puck_y" type="slide" axis="0 1 0" damping="0.005" limited="false"/> -->
+            <joint name="puck_y" type="slide" axis="0 1 0" damping="0.04" limited="false"/>
             <joint name="puck_yaw" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>
             <body name="puck">
                 <geom pos="0 0 0" name="puck" type="cylinder" material="red" size="0.03165 0.003"

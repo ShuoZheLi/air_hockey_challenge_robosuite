@@ -183,6 +183,10 @@ class AirHockey(SingleArmEnv):
 
         gripper_types = "WipingGripper"
 
+        self.arm_limit_collision_penalty = -10
+        self.success_reward = 1
+        self.goal_pos = [0,0,1]
+
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -234,6 +238,9 @@ class AirHockey(SingleArmEnv):
     # gripper position
     # print(self.sim.data.site_xpos[self.robots[0].eef_site_id])
 
+    def reset(self, ):
+        return super().reset()
+
     def reward(self, action=None):
         """
         Reward function for the task.
@@ -266,14 +273,18 @@ class AirHockey(SingleArmEnv):
         # print(self.sim.model._site_name2id.keys())
 
         # 
-        # print(self.sim.data.get_body_xpos("puck"))
+        print("puck: ", self.sim.data.get_body_xpos("puck"))
+
+        # print("puck_x:", self.sim.data.get_joint_qpos("puck_x"))
+        # print("puck_y:", self.sim.data.get_joint_qpos("puck_y"))
+        # print("puck_yaw:", self.sim.data.get_joint_qpos("puck_yaw"))
 
         eef_ori = self.sim.data.get_body_xquat("gripper0_eef")
         eef_angle = self.quat2axisangle([eef_ori[1],eef_ori[2],eef_ori[3], eef_ori[0]])/math.pi*180
         # print(eef_angle)
 
         # gripper0_wiping_gripper position
-        print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
+        # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
        
 
         # print("self.sim.model.body_name2id: ", self.sim.model._body_name2id.keys())
@@ -317,6 +328,78 @@ class AirHockey(SingleArmEnv):
             reward *= self.reward_scale / 2.25
 
         return reward
+    
+    def _post_action(self, action):
+        """
+        In addition to super method, add additional info if requested
+        Args:
+            action (np.array): Action to execute within the environment
+        Returns:
+            3-tuple:
+                - (float) reward from the environment
+                - (bool) whether the current episode is completed or not
+                - (dict) info about current env step
+        """
+        reward, done, info = super()._post_action(action)
+        
+        done, reward = self._check_terminated(done, reward, info)
+        return reward, done, info
+
+    def _check_terminated(self, done, reward, info):
+        """
+        Check if the task has completed one way or another. The following conditions lead to termination:
+            - Collision
+            - Task completion (pushing succeeded)
+            - Joint Limit reached
+        Returns:
+            bool: True if episode is terminated
+        """
+        # terminated = False
+        # Prematurely terminate if contacting the table with the arm
+        if self.check_contact(self.robots[0].robot_model):
+            reward = self.arm_limit_collision_penalty
+            print("arm collision happens")
+            info["terminated_reason"] = "arm_hit_table"
+            done = True
+        if self.check_contact("gripper0_hand_collision"):
+            reward = self.arm_limit_collision_penalty
+            print("gripper hand collision happens")
+            info["terminated_reason"] = "gripper_hit_table"
+            done = True
+        
+        if self.robots[0].check_q_limits():
+            reward = self.arm_limit_collision_penalty
+            print("reach joint limits")
+            info["terminated_reason"] = "arm_limit"
+            done = True
+
+        if self.sim.data.get_body_xpos("puck")[0] < -0.1:
+            reward = self.arm_limit_collision_penalty
+            print("puck out of table")
+            info["terminated_reason"] = "puck_out_of_table"
+            done = True
+        
+        # if np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])) >= 100:
+        #     print("too much force: ", np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])))
+        #     reward = self.arm_limit_collision_penalty
+        #     done = True
+        # Prematurely terminate if task is success
+        if self._check_success():
+            reward = self.success_reward
+            print("success")
+            info["terminated_reason"] = "success"
+            done = True
+        return done, reward
+    
+    def _check_success(self):
+        """
+        Check if cube has been lifted.
+        Returns:
+            bool: True if cube has been lifted
+        """
+        
+        # gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        return False
 
     def _load_model(self):
         """
@@ -475,11 +558,21 @@ class AirHockey(SingleArmEnv):
             # Sample from the placement initializer for all objects
             object_placements = self.placement_initializer.sample()
 
-            
+            # self.sim.data.set_body_xpos("puck", [0.8, -0.3, 1.2])
+
+            self.modder = DynamicsModder(sim=self.sim)
+            self.modder.mod_position("base", [0.8, np.random.uniform(-0.3, 0.3), 1.2])
+            # self.modder.mod_position("puck", [0.8, np.random.uniform(-0.3, 0.3), 1.2])
+            self.modder.update()
+
             # self.sim.data.set_joint_qpos('puck_x', np.concatenate([np.array([1, 0, 1]), np.array([0,0,0,0])]))
-            # self.sim.data.set_joint_qpos('puck_x', 1)
-            # self.sim.data.set_joint_qpos('puck_y', 0)
-            # self.sim.data.set_joint_qpos('puck_yaw', 2)
+
+            # self.sim.data.set_joint_qpos('puck_yaw', 1.2)
+            # self.sim.data.set_joint_qpos('puck_x', 0.8)
+            
+            # self.sim.data.set_joint_qpos('puck_y', -0.3)
+            
+            # self.sim.data.set_joint_qpos('puck_yaw', 0)
 
             # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
 
