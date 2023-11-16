@@ -164,6 +164,7 @@ class AirHockey(SingleArmEnv):
         camera_segmentations=None,  # {None, instance, class, element}
         renderer="mujoco",
         renderer_config=None,
+        initial_qpos=[-0.623, -1.256, 2.431, -2.959, -1.420, -2.122],
     ):
         # settings for table top
         self.table_full_size = table_full_size
@@ -188,6 +189,7 @@ class AirHockey(SingleArmEnv):
             controller_configs=controller_configs,
             mount_types="default",
             gripper_types=gripper_types,
+            initial_qpos=initial_qpos,
             initialization_noise=initialization_noise,
             use_camera_obs=use_camera_obs,
             has_renderer=has_renderer,

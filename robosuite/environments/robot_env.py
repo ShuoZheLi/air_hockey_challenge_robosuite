@@ -122,6 +122,7 @@ class RobotEnv(MujocoEnv):
         env_configuration="default",
         mount_types="default",
         controller_configs=None,
+        initial_qpos=None,
         initialization_noise=None,
         use_camera_obs=True,
         has_renderer=False,
@@ -162,6 +163,7 @@ class RobotEnv(MujocoEnv):
 
         # Initialization Noise
         initialization_noise = self._input2list(initialization_noise, self.num_robots)
+
 
         # Observations -- Ground truth = object_obs, Image data = camera_obs
         self.use_camera_obs = use_camera_obs
@@ -204,6 +206,7 @@ class RobotEnv(MujocoEnv):
                     "mount_type": mount_types[idx],
                     "initialization_noise": initialization_noise[idx],
                     "control_freq": control_freq,
+                    "initial_qpos": initial_qpos,
                 },
                 **robot_config,
             )
