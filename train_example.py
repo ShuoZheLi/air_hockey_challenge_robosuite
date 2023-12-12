@@ -32,8 +32,10 @@ env = GymWrapper(env, keys=['robot0_joint_pos_cos',
 # state dim = 21, all between -1 to 1, except eef_pos
 # action dim = 3, should be 2, just put 0 into z-axis
 # delta position
-x_pos = 0.2
-y_pos = 0
+
+x_pos = np.random.uniform(0.0, 0.4)
+y_pos = np.random.uniform(-0.4,0.4)
+
 goal_z = lambda x_pos: 0.99 + np.tan(0.26) * x_pos
 env.reset(goal_pos=[x_pos, y_pos, goal_z(x_pos)])
 
