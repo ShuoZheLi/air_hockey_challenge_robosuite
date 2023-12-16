@@ -92,9 +92,9 @@
             <joint name="puck_y" type="slide" axis="0 1 0" damping="0.04" limited="false"/>
             <joint name="puck_yaw" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>
             <body name="puck">
-                <geom pos="0 0 0" name="puck" type="cylinder" material="red" size="0.03165 0.003"
+                <geom pos="0 0 0" name="puck" type="cylinder" material="red" size="0.03165 0.006"
                       condim="4" priority="0" group="1"/>
-                <geom pos="0.02 0 0" type="cylinder" material="blue" size="0.01 0.0031"
+                <geom pos="0.02 0 0" type="cylinder" material="blue" size="0.01 0.0061"
                       condim="4" contype="0" conaffinity="0" group="1"/>
                 <inertial pos="0 0 0" mass="0.01" diaginertia="2.5e-6 2.5e-6 5e-6"/>
             </body>
