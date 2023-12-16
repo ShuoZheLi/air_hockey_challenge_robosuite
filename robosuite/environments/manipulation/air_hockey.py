@@ -181,7 +181,8 @@ class AirHockey(SingleArmEnv):
         # object placement initializer
         self.placement_initializer = placement_initializer
 
-        gripper_types = "WipingGripper"
+        # gripper_types = "WipingGripper"
+        gripper_types = "RoundGripper"
 
         self.arm_limit_collision_penalty = -10
         self.success_reward = 1
