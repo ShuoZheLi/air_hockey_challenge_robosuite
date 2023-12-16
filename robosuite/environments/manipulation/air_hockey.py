@@ -286,47 +286,6 @@ class AirHockey(SingleArmEnv):
 
         # gripper0_wiping_gripper position
         # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
-       
-
-        # print("self.sim.model.body_name2id: ", self.sim.model._body_name2id.keys())
-        # print("self.sim.model.joint_name2id: ", self.sim.model._joint_name2id.keys())
-
-        # body_id = self.sim.model.body_name2id("puck")
-        # print(self.sim.model.body_pos[body_id])
-
-        # joint_id=  self.sim.model.joint_name2id("puck_joint0")
-        # print(self.sim.model.joint_pos[joint_id])
-
-        
-
-        # print("puck_joint0 pos:", self.sim.data.get_joint_qpos("puck_joint0"))
-
-        # print(self.sim.data.joint_names)
-        # print(self.sim.model.joint_names)
-
-        
-
-        # sparse completion reward
-        # if self._check_success():
-        #     reward = 2.25
-
-        # use a shaping reward
-        # elif self.reward_shaping:
-
-        #     # reaching reward
-        #     cube_pos = self.sim.data.body_xpos[self.cube_body_id]
-        #     gripper_site_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        #     dist = np.linalg.norm(gripper_site_pos - cube_pos)
-        #     reaching_reward = 1 - np.tanh(10.0 * dist)
-        #     reward += reaching_reward
-
-        #     # grasping reward
-        #     if self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.cube):
-        #         reward += 0.25
-
-        # Scale reward if requested
-        if self.reward_scale is not None:
-            reward *= self.reward_scale / 2.25
 
         return reward
     
@@ -410,7 +369,7 @@ class AirHockey(SingleArmEnv):
 
         # Adjust base pose accordingly
         xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
-        print("xpos: ", xpos)
+        # print("xpos: ", xpos)
         xpos = (-0.32,0,0)
         self.robots[0].robot_model.set_base_xpos(xpos)
 
@@ -424,71 +383,12 @@ class AirHockey(SingleArmEnv):
         # Arena always gets set to zero origin
         mujoco_arena.set_origin([0, 0, 0])
 
-        # initialize objects of interest
-        tex_attrib = {
-            "type": "cube",
-        }
-        mat_attrib = {
-            "texrepeat": "1 1",
-            "specular": "0.4",
-            "shininess": "0.1",
-        }
-        redwood = CustomMaterial(
-            texture="WoodRed",
-            tex_name="redwood",
-            mat_name="redwood_mat",
-            tex_attrib=tex_attrib,
-            mat_attrib=mat_attrib,
-        )
-
-        # <joint name="puck_x" type="slide" axis="1 0 0" damping="0.005" limited="false"/>
-        #     <joint name="puck_y" type="slide" axis="0 1 0" damping="0.005" limited="false"/>
-        #     <joint name="puck_yaw" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>
-
-        self.puck = CylinderObject(
-            name="puck",
-            size=[0.03165, 0.003],
-            rgba=[1, 0, 0, 1],
-            # joints = [
-            #         {"name":"puck_x", "type":"slide", "axis":"1 0 0", "damping":"0.005", "limited":"false"},
-            #         {"name":"puck_y", "type":"slide", "axis":"0 1 0", "damping":"0.005", "limited":"false"},
-            #         {"name":"puck_yaw", "type":"hinge", "axis":"0 0 1", "damping":"2e-6", "limited":"false"},
-            #         ]
-
-        )
-
-        # self.cube = BoxObject(
-        #     name="cube",
-        #     size_min=[0.020, 0.020, 0.020],  # [0.015, 0.015, 0.015],
-        #     size_max=[0.022, 0.022, 0.022],  # [0.018, 0.018, 0.018])
-        #     rgba=[1, 0, 0, 1],
-        #     material=redwood,
-        # )
-
-        # # Create placement initializer
-        if self.placement_initializer is not None:
-            self.placement_initializer.reset()
-            self.placement_initializer.add_objects(self.puck)
-        else:
-            self.placement_initializer = UniformRandomSampler(
-                name="ObjectSampler",
-                mujoco_objects=self.puck,
-                x_range=[-0.03, 0.03],
-                y_range=[-0.03, 0.03],
-                rotation=None,
-                ensure_object_boundary_in_range=False,
-                ensure_valid_placement=True,
-                reference_pos=self.table_offset,
-                z_offset=0.01,
-            )
-
-        # print("self.cube: ", self.cube)
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
             mujoco_arena=mujoco_arena,
             mujoco_robots=[robot.robot_model for robot in self.robots],
-            mujoco_objects=self.puck,
+            # mujoco_objects=self.puck,
         )
 
     def _setup_references(self):
@@ -555,35 +455,11 @@ class AirHockey(SingleArmEnv):
 
         # Reset all object positions using initializer sampler if we're not directly loading from an xml
         if not self.deterministic_reset:
-
-            # Sample from the placement initializer for all objects
-            object_placements = self.placement_initializer.sample()
-
-            # self.sim.data.set_body_xpos("puck", [0.8, -0.3, 1.2])
-
             self.modder = DynamicsModder(sim=self.sim)
             self.modder.mod_position("base", [0.8, np.random.uniform(-0.3, 0.3), 1.2])
-            # self.modder.mod_position("puck", [0.8, np.random.uniform(-0.3, 0.3), 1.2])
             self.modder.update()
 
-            # self.sim.data.set_joint_qpos('puck_x', np.concatenate([np.array([1, 0, 1]), np.array([0,0,0,0])]))
-
-            # self.sim.data.set_joint_qpos('puck_yaw', 1.2)
-            # self.sim.data.set_joint_qpos('puck_x', 0.8)
-            
-            # self.sim.data.set_joint_qpos('puck_y', -0.3)
-            
-            # self.sim.data.set_joint_qpos('puck_yaw', 0)
-
-            # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
-
-            # Loop through all objects and reset their positions
-            # for obj_pos, obj_quat, obj in object_placements.values():
-                # self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
-                # self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array([1, -0.3, 1]), np.array(obj_quat)]))
-            #     # print("obj.joints: ",obj.joints[0])
-            #     self.sim.data.set_joint_qpos('puck_x', np.concatenate([np.array([1, 0, 1]), np.array(obj_quat)]))
-
+        
     def visualize(self, vis_settings):
         """
         In addition to super call, visualize gripper site proportional to the distance to the cube.
