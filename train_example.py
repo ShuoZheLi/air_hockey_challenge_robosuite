@@ -18,8 +18,20 @@ env = suite.make(
         has_offscreen_renderer=False,
         render_camera="sideview",
         use_camera_obs=False,
+        camera_names=["sideview"],
         control_freq=20,
     )
+
+# # If render visulization needed for saving episodes
+# env = suite.make(
+#         **config,
+#         has_renderer=True,
+#         has_offscreen_renderer=True,
+#         render_camera="sideview",
+#         use_camera_obs=True,
+#         camera_names=["sideview"],
+#         control_freq=20,
+#     )
 
 env = GymWrapper(env, keys=['robot0_joint_pos_cos', 
                             'robot0_joint_pos_sin', 
@@ -41,7 +53,10 @@ env.reset(goal_pos=[x_pos, y_pos, goal_z(x_pos)])
 
 while True:
     action = np.array([0.,  0.,  0])
-    obs, reward, done, info, _= env.step(action)
+    if env.env.use_camera_obs:
+        obs, reward, done, _, info, render_frame = env.step(action)
+    else:
+        obs, reward, done, _, info = env.step(action)
     env.render()
     if done:
         x_pos = 0.02
