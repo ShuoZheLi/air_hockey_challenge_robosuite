@@ -186,7 +186,9 @@ class AirHockey(SingleArmEnv):
 
         self.arm_limit_collision_penalty = -10
         self.success_reward = 1
-        self.goal_pos = [0,0,1]
+        self.old_puck_pos = None
+        
+        # self.goal_pos = [0,0,1]
 
         super().__init__(
             robots=robots,
@@ -286,6 +288,14 @@ class AirHockey(SingleArmEnv):
 
         # gripper0_wiping_gripper position
         # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
+        # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        
+        curr_puck_pos = self.sim.data.get_body_xpos("puck")
+
+        if self.old_puck_pos is not None:
+            reward = curr_puck_pos[0] - self.old_puck_pos[0]
+        
+        self.old_puck_pos = np.copy(curr_puck_pos)
 
         return reward
     
@@ -351,15 +361,16 @@ class AirHockey(SingleArmEnv):
             done = True
         return done, reward
     
-    def _check_success(self):
-        """
-        Check if cube has been lifted.
-        Returns:
-            bool: True if cube has been lifted
-        """
+    # def _check_success(self):
+    #     """
+    #     Check if cube has been lifted.
+    #     Returns:
+    #         bool: True if cube has been lifted
+    #     """
         
-        # gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        return False
+    #     # gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+    #     print("checks here")
+    #     return False
 
     def _load_model(self):
         """
@@ -434,16 +445,21 @@ class AirHockey(SingleArmEnv):
                     else np.zeros(3)
                 )
 
-            sensors = [cube_pos, cube_quat, gripper_to_cube_pos]
+            @sensor(modality=modality)
+            def goal_pos(obs_cache):
+                return self.sim.data.get_body_xpos("puck")
+
+            # sensors = [cube_pos, cube_quat, gripper_to_cube_pos]
+            sensors = [goal_pos]
             names = [s.__name__ for s in sensors]
 
             # Create observables
-            # for name, s in zip(names, sensors):
-            #     observables[name] = Observable(
-            #         name=name,
-            #         sensor=s,
-            #         sampling_rate=self.control_freq,
-            #     )
+            for name, s in zip(names, sensors):
+                observables[name] = Observable(
+                    name=name,
+                    sensor=s,
+                    sampling_rate=self.control_freq,
+                )
 
         return observables
 
@@ -489,6 +505,9 @@ class AirHockey(SingleArmEnv):
         # # cube is higher than the table top above a margin
         # return cube_height > table_height + 0.04
         return False
+        # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        # goal_pos = self.sim.data.get_body_xpos("puck")
+        # return (np.linalg.norm(gripper_pos - goal_pos) <= 0.1)
     
     def quat2axisangle(self, quat):
         """
