@@ -115,6 +115,9 @@ class GymWrapper(Wrapper, gym.Env):
                 - (bool) episode ending after an externally defined condition
                 - (dict) misc information
         """
+        
+        # action *= 0.3
+        action[0] *= 0.5
         ob_dict, reward, terminated, info = self.env.step(action)
         return self._flatten_obs(ob_dict), reward, terminated, False, info
 
