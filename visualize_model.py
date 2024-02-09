@@ -80,8 +80,9 @@ if __name__ == '__main__':
         return environment
 
     # Load the pytorch model stored at a file path and then visualize its performance using the renderer
-    checkpoint = torch.load("/Users/sarthakdayal/Documents/Programming Projects/AirHockey/air_hockey_challenge_robosuite/runs/AirHockey__Touching_Task__1__2024-01-21_19-23-09/Touching_Task.cleanrl_model", map_location=torch.device("cpu"))
-    while True:
+    checkpoint = torch.load("runs/AirHockeyHIT__FixController__1__2024-02-08_12-13-14/FixController.cleanrl_model", map_location=torch.device("cpu"))
+    successes = 0
+    for i in range(100):
         env = thunk()
         # Set the camera
         env.viewer.set_camera(camera_id=0)
@@ -108,7 +109,11 @@ if __name__ == '__main__':
             done = termination or truncation
             env.render()
             ret += reward
+        if 'reached' in infos.keys():
+            if infos['reached'] == 'true':
+                successes += 1
 
     # Close the environment
     env.close()
     print("rollout completed with return {}".format(ret))
+    print("OVERALL CATCHING SUCESS RATE AFTER 100 RUNS: {}".format(successes / 100))
