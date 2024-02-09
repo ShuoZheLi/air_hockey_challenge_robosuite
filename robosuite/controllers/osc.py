@@ -129,7 +129,7 @@ class OperationalSpaceController(Controller):
         interpolator_ori=None,
         control_ori=True,
         control_delta=True,
-        uncouple_pos_ori=True,
+        uncouple_pos_ori=False,
         **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
     ):
 
@@ -182,7 +182,7 @@ class OperationalSpaceController(Controller):
 
         # limits
         # self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
-        self.position_limits = np.array([[-0.1,-0.4,-10],[0.5,0.4,10]])
+        self.position_limits = np.array([[-0.1,-0.4,-10],[0.5,0.4,0]])
         self.orientation_limits = np.array(orientation_limits) if orientation_limits is not None else orientation_limits
 
         # control frequency
@@ -196,13 +196,13 @@ class OperationalSpaceController(Controller):
         self.uncoupling = uncouple_pos_ori
 
         # initialize goals based on initial pos / ori
-        self.goal_ori = np.array(self.initial_ee_ori_mat)
         self.goal_pos = np.array(self.initial_ee_pos)
 
         self.relative_ori = np.zeros(3)
         self.ori_ref = None
 
-        self.fixed_ori = trans.euler2mat(np.array([-3.1397173,   0.26, -1.5160433]))
+        self.fixed_ori = trans.euler2mat(np.array([-3.1397173,   np.tan(0.26), -1.5160433]))
+        self.goal_ori = np.array(self.fixed_ori)
 
     def set_goal(self, action, set_pos=None, set_ori=None):
         """
@@ -272,7 +272,9 @@ class OperationalSpaceController(Controller):
 
 
         self.goal_ori = self.fixed_ori
-        self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.985
+        # self.goal_pos[2] = np.tan(0.26) * self.goal_pos[0] + 0.985
+        self.position_limits[1][2] = np.tan(0.257) * self.goal_pos[0] + 0.98
+        self.position_limits[0][2] = np.tan(0.257) * self.goal_pos[0] + 0.98
 
         if self.interpolator_pos is not None:
             self.interpolator_pos.set_goal(self.goal_pos)
@@ -316,7 +318,7 @@ class OperationalSpaceController(Controller):
         else:
             desired_pos = np.array(self.goal_pos)
 
-        desired_pos[2] = 0.2685 * desired_pos[0] + 0.985
+        desired_pos[2] = np.tan(0.257) * desired_pos[0] + 0.985
         # desired_pos[2] = 0.2685 * desired_pos[0] + 0.95
         desired_pos = np.clip(desired_pos, self.position_limits[0], self.position_limits[1])
         
