@@ -185,9 +185,8 @@ class AirHockey(SingleArmEnv):
         gripper_types = "RoundGripper"
 
         self.arm_limit_collision_penalty = -10
-        self.success_reward = 1
+        self.success_reward = 50
         self.old_puck_pos = None
-        
         # self.goal_pos = [0,0,1]
 
         super().__init__(
@@ -276,26 +275,28 @@ class AirHockey(SingleArmEnv):
         # print(self.sim.model._site_name2id.keys())
 
         # 
-        print("puck: ", self.sim.data.get_body_xpos("puck"))
+        # print("puck: ", self.sim.data.get_body_xpos("puck"))
 
         # print("puck_x:", self.sim.data.get_joint_qpos("puck_x"))
         # print("puck_y:", self.sim.data.get_joint_qpos("puck_y"))
         # print("puck_yaw:", self.sim.data.get_joint_qpos("puck_yaw"))
 
-        eef_ori = self.sim.data.get_body_xquat("gripper0_eef")
-        eef_angle = self.quat2axisangle([eef_ori[1],eef_ori[2],eef_ori[3], eef_ori[0]])/math.pi*180
+        # eef_ori = self.sim.data.get_body_xquat("gripper0_eef")
+        # eef_angle = self.quat2axisangle([eef_ori[1],eef_ori[2],eef_ori[3], eef_ori[0]])/math.pi*180
         # print(eef_angle)
 
         # gripper0_wiping_gripper position
         # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
         # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        puck_vel = self.sim.data.get_body_xvelp("puck")
+        if (puck_vel[0] < 0):
+            reward = puck_vel[0] / 5
+        else:
+            reward = puck_vel[0] * 20
         
-        curr_puck_pos = self.sim.data.get_body_xpos("puck")
-
-        if self.old_puck_pos is not None:
-            reward = curr_puck_pos[0] - self.old_puck_pos[0]
-        
-        self.old_puck_pos = np.copy(curr_puck_pos)
+        gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        goal_pos = self.sim.data.get_body_xpos("puck")
+        reward -= 0.01
 
         return reward
     
@@ -438,10 +439,10 @@ class AirHockey(SingleArmEnv):
                 return convert_quat(np.array(self.sim.data.body_xquat[self.cube_body_id]), to="xyzw")
 
             @sensor(modality=modality)
-            def gripper_to_cube_pos(obs_cache):
+            def gripper_to_goal_pos(obs_cache):
                 return (
-                    obs_cache[f"{pf}eef_pos"] - obs_cache["cube_pos"]
-                    if f"{pf}eef_pos" in obs_cache and "cube_pos" in obs_cache
+                    obs_cache[f"{pf}eef_pos"] - obs_cache["goal_pos"]
+                    if f"{pf}eef_pos" in obs_cache and "goal_pos" in obs_cache
                     else np.zeros(3)
                 )
 
@@ -450,7 +451,7 @@ class AirHockey(SingleArmEnv):
                 return self.sim.data.get_body_xpos("puck")
 
             # sensors = [cube_pos, cube_quat, gripper_to_cube_pos]
-            sensors = [goal_pos]
+            sensors = [goal_pos, gripper_to_goal_pos]
             names = [s.__name__ for s in sensors]
 
             # Create observables
@@ -504,11 +505,8 @@ class AirHockey(SingleArmEnv):
 
         # # cube is higher than the table top above a margin
         # return cube_height > table_height + 0.04
-        return False
-        # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        # goal_pos = self.sim.data.get_body_xpos("puck")
-        # return (np.linalg.norm(gripper_pos - goal_pos) <= 0.1)
-    
+        return (self.sim.data.get_body_xvelp("puck")[0] > 0.50)
+
     def quat2axisangle(self, quat):
         """
         Converts quaternion to axis-angle format.
