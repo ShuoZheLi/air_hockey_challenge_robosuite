@@ -139,6 +139,10 @@ class OperationalSpaceController(Controller):
             joint_indexes,
             actuator_range,
         )
+
+        self.pos_angle = 0.09
+        self.pos_offset = 0.90
+
         # Determine whether this is pos ori or just pos
         self.use_ori = control_ori
 
@@ -201,7 +205,7 @@ class OperationalSpaceController(Controller):
         self.relative_ori = np.zeros(3)
         self.ori_ref = None
 
-        self.fixed_ori = trans.euler2mat(np.array([-3.1397173,   np.tan(0.26), -1.5160433]))
+        self.fixed_ori = trans.euler2mat(np.array([0,   math.pi + self.pos_angle, 0]))
         self.goal_ori = np.array(self.fixed_ori)
 
     def set_goal(self, action, set_pos=None, set_ori=None):
@@ -273,8 +277,8 @@ class OperationalSpaceController(Controller):
 
         self.goal_ori = self.fixed_ori
         # self.goal_pos[2] = np.tan(0.26) * self.goal_pos[0] + 0.985
-        self.position_limits[1][2] = np.tan(0.257) * self.goal_pos[0] + 0.98
-        self.position_limits[0][2] = np.tan(0.257) * self.goal_pos[0] + 0.98
+        self.position_limits[1][2] = self.pos_angle * self.goal_pos[0] + self.pos_offset
+        self.position_limits[0][2] = self.pos_angle * self.goal_pos[0] + self.pos_offset
 
         if self.interpolator_pos is not None:
             self.interpolator_pos.set_goal(self.goal_pos)
@@ -318,7 +322,7 @@ class OperationalSpaceController(Controller):
         else:
             desired_pos = np.array(self.goal_pos)
 
-        desired_pos[2] = np.tan(0.257) * desired_pos[0] + 0.985
+        desired_pos[2] = self.pos_angle * desired_pos[0] + self.pos_offset
         # desired_pos[2] = 0.2685 * desired_pos[0] + 0.95
         desired_pos = np.clip(desired_pos, self.position_limits[0], self.position_limits[1])
         
@@ -363,7 +367,6 @@ class OperationalSpaceController(Controller):
 
         # Gamma (without null torques) = J^T * F + gravity compensations
         self.torques = np.dot(self.J_full.T, decoupled_wrench) + self.torque_compensation
-
         # Calculate and add nullspace torques (nullspace_matrix^T * Gamma_null) to final torques
         # Note: Gamma_null = desired nullspace pose torques, assumed to be positional joint control relative
         #                     to the initial joint positions
@@ -392,7 +395,7 @@ class OperationalSpaceController(Controller):
         self.goal_ori = self.fixed_ori
         self.goal_pos = np.array(self.ee_pos)
 
-        self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.985
+        self.goal_pos[2] = self.pos_angle * self.goal_pos[0] + self.pos_offset
 
         # Also reset interpolators if required
 
