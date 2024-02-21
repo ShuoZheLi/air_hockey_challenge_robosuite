@@ -59,7 +59,7 @@
         <mesh name="wrist3" file="meshes/wrist3.stl" />
     </asset>
     <worldbody>
-        <body name="base" pos="0 0 0">
+        <body name="base" pos="0.16 0 0">
             <!-- robot view -->
             <camera mode="fixed" name="robotview" pos="1.0 0 0.4" quat="0.653 0.271 0.271 0.653"/>
             <inertial diaginertia="0 0 0" mass="0" pos="0 0 0"/>
