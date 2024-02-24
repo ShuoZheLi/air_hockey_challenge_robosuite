@@ -62,10 +62,12 @@ if __name__ == '__main__':
     config = {'env_name': 'AirHockey',
               'robots': ['UR5e'],
               'controller_configs':
-                  {'type': 'OSC_POSITION',
-                   'interpolation': None,
+                  {'type': 'OSC_POSE',
+                   'interpolation': 'linear',
                    "impedance_mode": "variable_kp",
-                   "control_delta": False},
+                   "control_delta": False,
+                   "ramp_ratio": 1,
+                   "kp_limits": (0, 10000000)},
               'gripper_types': 'Robotiq85Gripper', }
 
     env = suite.make(
@@ -75,7 +77,7 @@ if __name__ == '__main__':
         render_camera="sideview",
         use_camera_obs=True,
         use_object_obs=False,
-        control_freq=40,
+        control_freq=20,
     )
 
 
@@ -96,6 +98,7 @@ if __name__ == '__main__':
 
     # Start the main loop
     counter = 0
+    dataset = []
     while True:
         screen_image, _ = get_observation_data(obs)
         update_window(screen_image)
@@ -104,6 +107,17 @@ if __name__ == '__main__':
         world_coord = transforms.pixel_to_world_coord(np.array(pixel_coord), solve_for_z=False)
         error = np.array(world_coord[:-1]) - obs[-3:]
         print(obs[-3:], world_coord[:-1], error)
-        action = np.append(np.ones(6) * 300, world_coord[:-1], axis=0)
+        action = np.ones(6)
+        action[:3] *= 300
+        action[3:] *= 300
+        action = np.append(action, world_coord[:-1], axis=0)
+        dataset.append((world_coord[0], world_coord[1]))
+        action = np.append(action, np.zeros(3))
         obs, reward, done, info, _ = env.step(action)
         env.render()
+
+        print(len(dataset))
+        if len(dataset) > 999:
+            break
+
+    np.save("dataset", np.array(dataset))
