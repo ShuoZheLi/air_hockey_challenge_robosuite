@@ -182,6 +182,7 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
+            # action = probs.mean.detach()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 

@@ -166,6 +166,7 @@ class AirHockey(SingleArmEnv):
         renderer_config=None,
         initial_qpos=[-0.623, -1.256, 2.431, -2.959, -1.420, -2.122],
     ):
+        
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -184,11 +185,9 @@ class AirHockey(SingleArmEnv):
         # gripper_types = "WipingGripper"
         gripper_types = "RoundGripper"
 
-        self.arm_limit_collision_penalty = -10
+        self.arm_limit_collision_penalty = -20
         self.success_reward = 50
         self.old_puck_pos = None
-        # self.goal_pos = [0,0,1]
-
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -289,14 +288,22 @@ class AirHockey(SingleArmEnv):
         # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
         # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
         puck_vel = self.sim.data.get_body_xvelp("puck")
-        if (puck_vel[0] < 0):
-            reward = puck_vel[0] / 5
-        else:
-            reward = puck_vel[0] * 20
         
-        gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        goal_pos = self.sim.data.get_body_xpos("puck")
-        reward -= 0.01
+        if puck_vel[0] > 0.75:
+            reward = puck_vel[0]
+        elif puck_vel[0] > 1.5:
+            reward = puck_vel[0] * 2
+        elif puck_vel[0] > 3:
+            reward = puck_vel[0] * 3
+        elif puck_vel[0] > 6:
+            reward = puck_vel[0] * 4
+        elif puck_vel[0] > 12:
+            reward = puck_vel[0] * 10
+
+        if puck_vel[0] <= 0:
+            reward -= 0.2
+            reward -= puck_vel[0]
+        # goal_pos = self.sim.data.get_body_xpos("puck")
 
         return reward
     
@@ -501,11 +508,12 @@ class AirHockey(SingleArmEnv):
             bool: True if cube has been lifted
         """
         # cube_height = self.sim.data.body_xpos[self.cube_body_id][2]
-        # table_height = self.model.mujoco_arena.table_offset[2]
+        # table_height = self.model.mujoco_arena.table_offset[
 
         # # cube is higher than the table top above a margin
         # return cube_height > table_height + 0.04
-        return (self.sim.data.get_body_xvelp("puck")[0] > 0.50)
+        # return (self.sim.data.get_body_xvelp("puck")[0] > 0.50)
+        return False
 
     def quat2axisangle(self, quat):
         """
