@@ -34,7 +34,7 @@ class LinearInterpolator(Interpolator):
         ndim,
         controller_freq,
         policy_freq,
-        ramp_ratio=0.2,
+        ramp_ratio=1,
         use_delta_goal=False,
         ori_interpolate=None,
     ):
