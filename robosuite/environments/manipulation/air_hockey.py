@@ -11,6 +11,7 @@ from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler
 from robosuite.utils.transform_utils import convert_quat
 from robosuite.utils.mjmod import DynamicsModder
+import robosuite.utils.transform_utils as T
 
 class AirHockey(SingleArmEnv):
     """
@@ -188,6 +189,8 @@ class AirHockey(SingleArmEnv):
         self.arm_limit_collision_penalty = -20
         self.success_reward = 50
         self.old_puck_pos = None
+        self.check_off_table = False
+        self.fixed_ori = np.array([0,   math.pi - 0.05, 0])
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -319,7 +322,7 @@ class AirHockey(SingleArmEnv):
                 - (dict) info about current env step
         """
         reward, done, info = super()._post_action(action)
-        info = [self.sim.data.site_xpos[self.robots[0].eef_site_id], self.sim.data.get_body_xquat('gripper0_eef'), self.sim.data.get_body_xvelp('gripper0_eef'), self.sim.data.get_body_xvelr('gripper0_eef')]
+        
         done, reward = self._check_terminated(done, reward, info)
         return reward, done, info
 
@@ -334,6 +337,27 @@ class AirHockey(SingleArmEnv):
         """
         # terminated = False
         # Prematurely terminate if contacting the table with the arm
+        gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        self.table_tilt = 0.09
+        self.table_elevation = 1
+        self.table_x_start = 0.8
+
+        # allow for controller positions to point into the table to increase force
+        self.z_offset = 0.008
+        self.x_offset = self.z_offset / np.tan(self.table_tilt)
+        print(self.x_offset)
+
+        self.transform_z = lambda x : self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
+        print(self.transform_z(-0.623))
+        
+        # orientation_error = T.mat2euler(self.sim.data.site_xmat[self.sim.model.site_name2id(self.robots[0].eef_site_id)].reshape([3, 3])) - self.fixed
+        if not(gripper_pos[2] > self.transform_z(gripper_pos[0]) + 0.05):
+            self.check_off_table = True
+        
+        if self.check_off_table and gripper_pos[2] > self.transform_z(gripper_pos[0]) + 0.05:
+            reward = self.arm_limit_collision_penalty
+            info["terminated reason"] = "arm lifted off table"
+            done = True
         if self.check_contact(self.robots[0].robot_model):
             reward = self.arm_limit_collision_penalty
             print("arm collision happens")
