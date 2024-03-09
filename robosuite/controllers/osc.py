@@ -118,9 +118,9 @@ class OperationalSpaceController(Controller):
         # output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
         output_max=0.5,
         output_min=-0.5,
-        kp=300,
+        kp=250,
         damping_ratio=1,
-        impedance_mode="fixed",
+        impedance_mode="variable_kp",
         kp_limits=(0, 300),
         damping_ratio_limits=(0, 100),
         policy_freq=20,
@@ -154,7 +154,7 @@ class OperationalSpaceController(Controller):
 
 
         # Determine whether this is pos ori or just pos
-        self.use_ori = False
+        self.use_ori = control_ori
 
         # Determine whether we want to use delta or absolute values as inputs
         self.use_delta = control_delta
