@@ -3,7 +3,6 @@ import sys
 
 import numpy as np
 import robosuite as suite
-from robosuite.controllers import load_controller_config
 from robosuite.wrappers.visualization_wrapper import VisualizationWrapper
 from robosuite.utils.camera_utils import get_camera_extrinsic_matrix, \
     get_camera_intrinsic_matrix
@@ -17,9 +16,6 @@ def image_to_pygame(image):
     """
     Convert an image to a pygame surface and scale it to fit the window
     """
-    # pg_image = image.clip(0, 1)
-    # pg_image = (image * 255).astype(np.uint8)
-    # pg_image = np.transpose(image, (1, 0, 2))  # Transpose the image array
     pg_image = pygame.surfarray.make_surface(image)
     pg_image = pygame.transform.scale(pg_image, size)  # Scale the image to fit the window
     return pg_image
@@ -63,11 +59,14 @@ if __name__ == '__main__':
               'robots': ['UR5e'],
               'controller_configs':
                   {'type': 'OSC_POSE',
+                   "kp": [200, 200, 15, 100, 100, 100],
+                   "damping_raio": [50, 50, 1, 20, 20, 20],
                    'interpolation': 'linear',
-                   "impedance_mode": "variable_kp",
+                   "impedance_mode": "fixed",
                    "control_delta": False,
                    "ramp_ratio": 1,
-                   "kp_limits": (0, 10000000)},
+                   "kp_limits": (0, 10000000),
+                   "uncouple_pos_ori": False},
               'gripper_types': 'Robotiq85Gripper', }
 
     env = suite.make(
@@ -77,7 +76,7 @@ if __name__ == '__main__':
         render_camera="sideview",
         use_camera_obs=True,
         use_object_obs=False,
-        control_freq=20,
+        control_freq=20
     )
 
 
@@ -85,7 +84,7 @@ if __name__ == '__main__':
     env = GymWrapper(env, keys=['agentview_image', 'robot0_eef_pos'])
 
     intrinsic_mat = get_camera_intrinsic_matrix(env.sim, 'agentview', *size)
-    f = 700
+    f = 350
     intrinsic_mat = np.array([[f, 0, 500],
                               [0, f, 500],
                               [0, 0, 1]])
@@ -97,27 +96,46 @@ if __name__ == '__main__':
     obs, _ = env.reset()
 
     # Start the main loop
-    counter = 0
-    dataset = []
+    coordinates = [
+        [-0.03, 0, 1],  # From the 'red_dot' element
+        [0.26, 0, 1],  # From the 'red_dot1' element
+        # [0.26, 0.3, 1],  # From the 'red_dot2' element
+        # [-0.03, 0.3, 1]  # From the 'red_dot3' element
+    ]
+    idx = 0
+    freq = 5
+    count = 0
     while True:
         screen_image, _ = get_observation_data(obs)
         update_window(screen_image)
 
         relative_coord = transforms.get_relative_coord(pixel_coord)
-        world_coord = transforms.pixel_to_world_coord(np.array(pixel_coord), solve_for_z=False)
+        world_coord = transforms.pixel_to_world_coord(np.array(pixel_coord), solve_for_z=True)
         error = np.array(world_coord[:-1]) - obs[-3:]
-        print(obs[-3:], world_coord[:-1], error)
+        # print(obs[-3:], world_coord[:-1], error)
         action = np.ones(6)
-        action[:3] *= 300
-        action[3:] *= 300
+        # action[:3] *= 300
+        # action[3:] *= 400
+        if count % freq == 0:
+            count = 0
+            idx += 1
         action = np.append(action, world_coord[:-1], axis=0)
-        dataset.append((world_coord[0], world_coord[1]))
+        # action = np.append(action, np.array([coordinates[idx % len(coordinates)]]))
         action = np.append(action, np.zeros(3))
-        obs, reward, done, info, _ = env.step(action)
+        # TODO Fix this hack
+        action[6] += 0.1
+
+        # print(obs[-3:], action[6:9])
+        # action[6:9] -= obs[-3:]
+        obs, reward, done, info, _ = env.step(action[6:])
         env.render()
+        count += 1
+        idx %= len(coordinates)
 
-        print(len(dataset))
-        if len(dataset) > 999:
-            break
+        # if done:
+        #     env.reset()
+        # print(len(dataset))
+        # if len(dataset) > 999:
+        #     break
 
-    np.save("dataset", np.array(dataset))
+    # np.save("dataset", np.array(dataset))

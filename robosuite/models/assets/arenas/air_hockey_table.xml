@@ -15,7 +15,7 @@
                  rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
         <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5"
                   reflectance="0.2"/> -->
-        
+
         <texture file="../textures/light-gray-floor-tile.png" type="2d" name="texplane"/>
         <material name="floorplane" reflectance="0.01" shininess="0.0" specular="0.0" texrepeat="2 2" texture="texplane" texuniform="true"/>
 
@@ -41,11 +41,17 @@
     <worldbody>
         <!-- <body name="table" axisangle="0 1 0 -0.3925" pos="0.15 0 0.3"> -->
         <!-- <body name="table" axisangle="0 1 0 -0.3925" pos="1 0 1"> -->
+        <site name="red_dot" type="sphere" pos="0.05 0.3 1" size="0.05" rgba="1 0 0 1"/>
+        <site name="red_dot1" type="sphere" pos="0.05 -0.3 1" size="0.05" rgba="1 0 0 1"/>
+        <site name="red_dot2" type="sphere" pos="0.2 0.3 1" size="0.05" rgba="1 0 0 1"/>
+        <site name="red_dot3" type="sphere" pos="0.2 -0.3 1" size="0.05" rgba="1 0 0 1"/>
+        <site name="red_dot4" type="sphere" pos="-0.48 0 1" size="0.08" rgba="1 0 0 1"/>
+
         <body name="table" pos="0.8 0 1.0" axisangle="0 1 0 -0.09">
             <body name="table_surface">
                 <!-- <geom name="surface" type="box" material="white" size="1.064 0.609 0.0505" pos="0 0 -0.0505"
                       condim="4" friction="0.08 0.08 0.0" priority="1"
-                      solref="0.0125 0.5" solimp="0.9 0.999 0.001 0.5 2" 
+                      solref="0.0125 0.5" solimp="0.9 0.999 0.001 0.5 2"
                       group="1" contype="1" conaffinity="1"/> -->
                 <geom name="surface" type="box" material="white" size="1.064 0.609 0.0505" pos="0 0 -0.0505"
                 condim="4" friction="0.08 0.08 0.0" priority="1"
@@ -108,7 +114,7 @@
         <!-- bird view -->
         <camera mode="fixed" name="birdview" pos="-0.2 0 7.0" quat="0.7071 0 0 0.7071"/>
         <!-- agent view -->
-        <camera mode="fixed" name="agentview" pos="0.3 0 3" quat="0.7071 0 0 0.7071"/>
+        <camera mode="fixed" name="agentview" pos="0.5 0 3" quat="0.7071 0 0 0.7071"/>
         <!-- side view -->
         <camera mode="fixed" name="sideview" pos="-0.05651774593317116 1.2761224129427358 1.4879572214102434" quat="0.009905065491771751 0.006877963156909582 0.5912228352893879 0.806418094001364" />
 
@@ -134,6 +140,6 @@
         <geom pos="0 0 -0.1" name="floor" size="0 0 0.05" type="plane" material="floorplane"/>
     </worldbody>
      -->
-    
+
 
 </mujoco>
