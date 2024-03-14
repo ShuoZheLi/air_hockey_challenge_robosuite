@@ -164,8 +164,9 @@ class AirHockey(SingleArmEnv):
         camera_segmentations=None,  # {None, instance, class, element}
         renderer="mujoco",
         renderer_config=None,
-        initial_qpos=[-0.623, -1.256, 2.431, -2.959, -1.420, -2.122],
+        initial_qpos=[-0.265276, -1.383369, 2.326823, -2.601113, -1.547214, -3.405865],
     ):
+
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -312,6 +313,10 @@ class AirHockey(SingleArmEnv):
                 - (dict) info about current env step
         """
         reward, done, info = super()._post_action(action)
+
+        # end_effector_pos = self.sim.data.get_body_xpos('robot0_right_hand')
+        # # Update the position of the sphere to match the end effector
+        # self.sim.model.body_pos[self.sim.model.body_name2id('robot0_end_effector_sphere')] = end_effector_pos
         
         done, reward = self._check_terminated(done, reward, info)
         return reward, done, info
@@ -329,24 +334,24 @@ class AirHockey(SingleArmEnv):
         # Prematurely terminate if contacting the table with the arm
         if self.check_contact(self.robots[0].robot_model):
             reward = self.arm_limit_collision_penalty
-            print("arm collision happens")
+            # print("arm collision happens")
             info["terminated_reason"] = "arm_hit_table"
             done = True
         if self.check_contact("gripper0_hand_collision"):
             reward = self.arm_limit_collision_penalty
-            print("gripper hand collision happens")
+            # print("gripper hand collision happens")
             info["terminated_reason"] = "gripper_hit_table"
             done = True
         
         if self.robots[0].check_q_limits():
             reward = self.arm_limit_collision_penalty
-            print("reach joint limits")
+            # print("reach joint limits")
             info["terminated_reason"] = "arm_limit"
             done = True
 
         if self.sim.data.get_body_xpos("puck")[0] < -0.1:
             reward = self.arm_limit_collision_penalty
-            print("puck out of table")
+            # print("puck out of table")
             info["terminated_reason"] = "puck_out_of_table"
             done = True
         
@@ -357,7 +362,7 @@ class AirHockey(SingleArmEnv):
         # Prematurely terminate if task is success
         if self._check_success():
             reward = self.success_reward
-            print("success")
+            # print("success")
             info["terminated_reason"] = "success"
             done = True
         return done, reward
@@ -382,7 +387,7 @@ class AirHockey(SingleArmEnv):
         # Adjust base pose accordingly
         xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
         # print("xpos: ", xpos)
-        xpos = (-0.32,0,0)
+        xpos = (-0.48, 0, 0)
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace

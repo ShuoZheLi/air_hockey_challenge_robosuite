@@ -2,12 +2,12 @@
     <actuator>
         <!-- Physical limits of the actuator. -->
         <!-- Values taken from https://www.universal-robots.com/articles/ur-articles/max-joint-torques/ -->
-        <motor ctrllimited="true" ctrlrange="-150.0 150.0" joint="shoulder_pan_joint" name="torq_j1"/>
-        <motor ctrllimited="true" ctrlrange="-150.0 150.0" joint="shoulder_lift_joint" name="torq_j2"/>
-        <motor ctrllimited="true" ctrlrange="-150.0 150.0" joint="elbow_joint" name="torq_j3"/>
-        <motor ctrllimited="true" ctrlrange="-28.0 28.0" joint="wrist_1_joint" name="torq_j4"/>
-        <motor ctrllimited="true" ctrlrange="-28.0 28.0" joint="wrist_2_joint" name="torq_j5"/>
-        <motor ctrllimited="true" ctrlrange="-28.0 28.0" joint="wrist_3_joint" name="torq_j6"/>
+        <motor ctrllimited="true" ctrlrange="-15000.0 15000.0" joint="shoulder_pan_joint" name="torq_j1"/>
+        <motor ctrllimited="true" ctrlrange="-15000.0 15000.0" joint="shoulder_lift_joint" name="torq_j2"/>
+        <motor ctrllimited="true" ctrlrange="-15000.0 15000.0" joint="elbow_joint" name="torq_j3"/>
+        <motor ctrllimited="true" ctrlrange="-2800.0 2800.0" joint="wrist_1_joint" name="torq_j4"/>
+        <motor ctrllimited="true" ctrlrange="-2800.0 2800.0" joint="wrist_2_joint" name="torq_j5"/>
+        <motor ctrllimited="true" ctrlrange="-2800.0 2800.0" joint="wrist_3_joint" name="torq_j6"/>
     </actuator>
     <asset>
 
@@ -59,7 +59,7 @@
         <mesh name="wrist3" file="meshes/wrist3.stl" />
     </asset>
     <worldbody>
-        <body name="base" pos="0.16 0 0">
+        <body name="base" pos="0 0 0">
             <!-- robot view -->
             <camera mode="fixed" name="robotview" pos="1.0 0 0.4" quat="0.653 0.271 0.271 0.653"/>
             <inertial diaginertia="0 0 0" mass="0" pos="0 0 0"/>
