@@ -1,0 +1,43 @@
+diff --git a/robosuite/controllers/osc.py b/robosuite/controllers/osc.py
+index e899c0c..67ba3e3 100644
+--- a/robosuite/controllers/osc.py
++++ b/robosuite/controllers/osc.py
+@@ -117,19 +117,19 @@ class OperationalSpaceController(Controller):
+         # output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
+         output_max=0.5,
+         output_min=-0.5,
+-        kp=150,
+-        damping_ratio=1,
+-        impedance_mode="fixed",
++        kp=150, 
++        damping_ratio=3.0, #Previosuly 1
++        impedance_mode="variable_kp", #previously fixed
+         kp_limits=(0, 300),
+         damping_ratio_limits=(0, 100),
+         policy_freq=20,
+         position_limits=None,
+         orientation_limits=None,
+-        interpolator_pos=None,
+-        interpolator_ori=None,
++        interpolator_pos='Linear',#previously none
++        interpolator_ori=None, #previously none
+         control_ori=True,
+         control_delta=True,
+-        uncouple_pos_ori=False,
++        uncouple_pos_ori=True, #previously false
+         **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
+     ):
+ 
+diff --git a/visualize_model.py b/visualize_model.py
+index 1598818..5552143 100644
+--- a/visualize_model.py
++++ b/visualize_model.py
+@@ -80,7 +80,7 @@ if __name__ == '__main__':
+         return environment
+ 
+     # Load the pytorch model stored at a file path and then visualize its performance using the renderer
+-    checkpoint = torch.load("runs/AirHockeyHIT__FixController__1__2024-02-08_12-13-14/FixController.cleanrl_model", map_location=torch.device("cpu"))
++    checkpoint = torch.load("/Users/kavanmehta/Documents/GitHub/air_hockey_challenge_robosuite/runs/AirHockey__ScaledReward__1__2024-02-19_15-38-25/ScaledReward.cleanrl_model", map_location=torch.device("cpu"))
+     successes = 0
+     for i in range(100):
+         env = thunk()

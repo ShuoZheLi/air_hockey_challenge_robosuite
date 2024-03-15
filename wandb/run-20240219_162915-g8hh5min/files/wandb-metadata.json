@@ -1,0 +1,45 @@
+{
+    "os": "macOS-12.4-arm64-arm-64bit",
+    "python": "3.9.18",
+    "heartbeatAt": "2024-02-19T22:29:15.485649",
+    "startedAt": "2024-02-19T22:29:15.107243",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "--track",
+        "--env-id=AirHockey",
+        "--anneal-lr=False",
+        "--clip-vloss=False",
+        "--exp-name",
+        "OscTest1",
+        "--num-envs=5"
+    ],
+    "state": "running",
+    "program": "/Users/kavanmehta/Documents/GitHub/air_hockey_challenge_robosuite/ppo_continuous_action.py",
+    "codePathLocal": "ppo_continuous_action.py",
+    "codePath": "ppo_continuous_action.py",
+    "git": {
+        "remote": "https://github.com/ShuoZheLi/air_hockey_challenge_robosuite.git",
+        "commit": "9302f7d78ea3baeec0165d7c36a15625468104e9"
+    },
+    "email": "kavanmehta2005@gmail.com",
+    "root": "/Users/kavanmehta/Documents/GitHub/air_hockey_challenge_robosuite",
+    "host": "wireless-10-148-80-188.public.utexas.edu",
+    "username": "kavanmehta",
+    "executable": "/Users/kavanmehta/anaconda3/envs/robo/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 8,
+    "disk": {
+        "/": {
+            "total": 228.27386474609375,
+            "used": 19.911487579345703
+        }
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 8.0
+    }
+}

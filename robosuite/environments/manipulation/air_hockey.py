@@ -322,7 +322,7 @@ class AirHockey(SingleArmEnv):
                 - (dict) info about current env step
         """
         reward, done, info = super()._post_action(action)
-        
+        info = [self.sim.data.site_xpos[self.robots[0].eef_site_id], self.sim.data.get_body_xquat('gripper0_eef'), self.sim.data.get_body_xvelp('gripper0_eef'), self.sim.data.get_body_xvelr('gripper0_eef')]
         done, reward = self._check_terminated(done, reward, info)
         return reward, done, info
 
