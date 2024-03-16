@@ -153,7 +153,7 @@ class OperationalSpaceController(Controller):
         self.table_x_start = 0.8
 
         # allow for controller positions to point into the table to increase force
-        self.z_offset = 0.008
+        self.z_offset = 0.01
         self.x_offset = self.z_offset / np.tan(self.table_tilt)
         print(self.x_offset)
 
@@ -204,7 +204,7 @@ class OperationalSpaceController(Controller):
 
         # limits
         # self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
-        self.position_limits = np.array([[-0.1, -0.4, -10], [0.26, 0.4, 0]])
+        self.position_limits = np.array([[-0.1, -0.45, -10], [0.26, 0.45, 0]])
         self.orientation_limits = np.array(orientation_limits) if orientation_limits is not None else orientation_limits
 
         # control frequency
