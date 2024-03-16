@@ -111,12 +111,19 @@ def make_robosuite_env(idx, capture_video, run_name, gamma):
     def thunk():
         controller_config = load_controller_config(default_controller="OSC_POSITION")
         config = {'env_name': 'AirHockey',
-            'robots': ['UR5e'], 
-            'controller_configs': 
-                    {'type': 'OSC_POSITION', 
-                    'interpolation': None, 
-                    "impedance_mode" : "fixed"}, 
-            'gripper_types': 'Robotiq85Gripper',}
+              'robots': ['UR5e'],
+              'controller_configs':
+                  {'type': 'OSC_POSE',
+                   "kp": [1000, 1000, 1000, 1000, 1000, 1000],
+                   "damping_ratio": [1, 1, 1, 1, 1, 1],
+                   'interpolation': 'linear',
+                   "impedance_mode": "fixed",
+                   "control_delta": False,
+                   "ramp_ratio": 1,
+                   "kp_limits": (0, 10000000),
+                   "uncouple_pos_ori": False,
+                   },
+              'gripper_types': 'Robotiq85Gripper', }
 
         env = robosuite.make(
             **config,
