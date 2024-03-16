@@ -165,7 +165,7 @@ class AirHockey(SingleArmEnv):
         camera_segmentations=None,  # {None, instance, class, element}
         renderer="mujoco",
         renderer_config=None,
-        initial_qpos=[-0.623, -1.256, 2.431, -2.959, -1.420, -2.122],
+        initial_qpos=[-0.30110915, -0.98201775,  2.4221648,  -3.11343573, -1.54358871, -3.44142301],
     ):
         
         # settings for table top
@@ -288,10 +288,12 @@ class AirHockey(SingleArmEnv):
         # print(eef_angle)
 
         # gripper0_wiping_gripper position
-        # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
-        # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        print('------')
+        print(self.sim.data.qpos[3:])
+        print('------')
+        gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
         puck_vel = self.sim.data.get_body_xvelp("puck")
-        
+        # print(f"location: {}")
         # MAXIMIZE HITTING VELOCITY
         if puck_vel[0] > 0.05:
             reward = 4
