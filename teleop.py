@@ -11,6 +11,7 @@ from robosuite.utils.RobosuiteTransforms import RobosuiteTransforms
 from robosuite.wrappers import GymWrapper
 
 import cv2
+import os
 
 
 def image_to_pygame(image):
@@ -51,7 +52,7 @@ if __name__ == '__main__':
     pygame.init()
 
     # Set the size of the window
-    size = (1000, 1000)
+    size = (500, 500)
 
     screen_image = np.zeros((size[0], size[1], 3), np.float32)
     pixel_coord = [0, 0, 1]
@@ -85,9 +86,10 @@ if __name__ == '__main__':
     env = GymWrapper(env, keys=['agentview_image', 'robot0_eef_pos'])
 
     intrinsic_mat = get_camera_intrinsic_matrix(env.sim, 'agentview', *size)
-    f = 700
-    intrinsic_mat = np.array([[f, 0, 500],
-                              [0, f, 500],
+    f = 350 # focal length
+    c = 250 # center point
+    intrinsic_mat = np.array([[f, 0, c],
+                              [0, f, c],
                               [0, 0, 1]])
     extrinsic_mat = get_camera_extrinsic_matrix(env.sim, 'agentview')
     extrinsic_mat = np.linalg.inv(extrinsic_mat)
@@ -97,8 +99,11 @@ if __name__ == '__main__':
     obs, _ = env.reset()
 
     # Start the main loop
-    counter = 0
-    dataset = []
+    counter = 1
+    for file in os.listdir("./Datasets"):
+        if file.endswith(".npy"):
+            counter += 1
+    dataset = [] # list that stores numpy arrays
     while True:
         screen_image, _ = get_observation_data(obs)
         update_window(screen_image)
@@ -111,13 +116,34 @@ if __name__ == '__main__':
         action[:3] *= 300
         action[3:] *= 300
         action = np.append(action, world_coord[:-1], axis=0)
-        dataset.append((world_coord[0], world_coord[1]))
+        # dataset.append((world_coord[0], world_coord[1])) # what the camera thinks your mouse location is
         action = np.append(action, np.zeros(3))
-        obs, reward, done, info, _ = env.step(action)
+        # obs, reward, done, info, _ = env.step(action)
+        obs, reward, done, truncated, info = env.step(action)
+        dataset.append((world_coord[0], world_coord[1], *tuple(info["puck_pos"]))) # what the camera thinks your mouse location is + puck position (x, y, z)
         env.render()
+
+        if (done):
+            savePath = "./Datasets/dataset" + str(counter)
+            np.save(savePath, np.array(dataset))
+            print("Saved dataset" + str(counter))
+            counter += 1
+            env = suite.make(
+                **config,
+                has_renderer=True,
+                has_offscreen_renderer=True,
+                render_camera="sideview",
+                use_camera_obs=True,
+                use_object_obs=False,
+                control_freq=20,
+            )
+            env = VisualizationWrapper(env)
+            env = GymWrapper(env, keys=['agentview_image', 'robot0_eef_pos'])
 
         print(len(dataset))
         if len(dataset) > 999:
             break
 
-    np.save("dataset", np.array(dataset))
+    savePath = "./Datasets/dataset" + str(counter)
+    np.save(savePath, np.array(dataset))
+    print("Saved dataset" + str(counter))
