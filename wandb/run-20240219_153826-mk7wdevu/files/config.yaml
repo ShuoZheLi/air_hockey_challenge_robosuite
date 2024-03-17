@@ -1,0 +1,123 @@
+wandb_version: 1
+
+exp_name:
+  desc: null
+  value: ScaledReward
+seed:
+  desc: null
+  value: 1
+torch_deterministic:
+  desc: null
+  value: true
+cuda:
+  desc: null
+  value: true
+track:
+  desc: null
+  value: true
+wandb_project_name:
+  desc: null
+  value: cleanRL
+wandb_entity:
+  desc: null
+  value: null
+capture_video:
+  desc: null
+  value: false
+save_model:
+  desc: null
+  value: false
+upload_model:
+  desc: null
+  value: false
+hf_entity:
+  desc: null
+  value: ''
+checkpoint_path:
+  desc: null
+  value: null
+env_id:
+  desc: null
+  value: AirHockey
+total_timesteps:
+  desc: null
+  value: 1000000
+learning_rate:
+  desc: null
+  value: 0.0003
+num_envs:
+  desc: null
+  value: 5
+num_steps:
+  desc: null
+  value: 10242
+anneal_lr:
+  desc: null
+  value: false
+gamma:
+  desc: null
+  value: 0.99
+gae_lambda:
+  desc: null
+  value: 0.95
+num_minibatches:
+  desc: null
+  value: 1
+update_epochs:
+  desc: null
+  value: 50
+norm_adv:
+  desc: null
+  value: true
+clip_coef:
+  desc: null
+  value: 0.2
+clip_vloss:
+  desc: null
+  value: false
+ent_coef:
+  desc: null
+  value: 0.0
+vf_coef:
+  desc: null
+  value: 0.5
+max_grad_norm:
+  desc: null
+  value: 0.5
+target_kl:
+  desc: null
+  value: null
+batch_size:
+  desc: null
+  value: 51210
+minibatch_size:
+  desc: null
+  value: 51210
+_wandb:
+  desc: null
+  value:
+    code_path: code/ppo_continuous_action.py
+    python_version: 3.9.18
+    cli_version: 0.16.1
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1708378706.853528
+    t:
+      1:
+      - 1
+      - 55
+      2:
+      - 1
+      - 55
+      3:
+      - 13
+      - 16
+      - 23
+      - 35
+      4: 3.9.18
+      5: 0.16.1
+      8:
+      - 4
+      - 5
+      13: darwin-arm64
