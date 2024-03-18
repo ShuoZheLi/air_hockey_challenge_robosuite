@@ -2,12 +2,12 @@
     <actuator>
         <!-- Physical limits of the actuator. -->
         <!-- Values taken from https://www.universal-robots.com/articles/ur-articles/max-joint-torques/ -->
-        <motor ctrllimited="true" ctrlrange="-150.0 150.0" joint="shoulder_pan_joint" name="torq_j1"/>
-        <motor ctrllimited="true" ctrlrange="-150.0 150.0" joint="shoulder_lift_joint" name="torq_j2"/>
-        <motor ctrllimited="true" ctrlrange="-150.0 150.0" joint="elbow_joint" name="torq_j3"/>
-        <motor ctrllimited="true" ctrlrange="-28.0 28.0" joint="wrist_1_joint" name="torq_j4"/>
-        <motor ctrllimited="true" ctrlrange="-28.0 28.0" joint="wrist_2_joint" name="torq_j5"/>
-        <motor ctrllimited="true" ctrlrange="-28.0 28.0" joint="wrist_3_joint" name="torq_j6"/>
+        <motor ctrllimited="true" ctrlrange="-15000.0 15000.0" joint="shoulder_pan_joint" name="torq_j1"/>
+        <motor ctrllimited="true" ctrlrange="-15000.0 15000.0" joint="shoulder_lift_joint" name="torq_j2"/>
+        <motor ctrllimited="true" ctrlrange="-15000.0 15000.0" joint="elbow_joint" name="torq_j3"/>
+        <motor ctrllimited="true" ctrlrange="-2800.0 2800.0" joint="wrist_1_joint" name="torq_j4"/>
+        <motor ctrllimited="true" ctrlrange="-2800.0 2800.0" joint="wrist_2_joint" name="torq_j5"/>
+        <motor ctrllimited="true" ctrlrange="-2800.0 2800.0" joint="wrist_3_joint" name="torq_j6"/>
     </actuator>
     <asset>
 
@@ -15,18 +15,18 @@
 	<material name="JointGrey" specular="0.5" shininess="0.25" rgba="0.278431 0.278431 0.278431 1.000000"/>
 	<material name="LinkGrey" specular="0.5" shininess="0.25" rgba="0.820392 0.820392 0.820392 1.000000"/>
 	<material name="URBlue" specular="0.5" shininess="0.25" rgba="0.490196 0.678431 0.800000 1.000000"/>
-      
+
         <!-- base material and mesh -->
 	<mesh name="base_vis_0" file="obj_meshes/base_vis/base_vis_0.obj"/>
 	<mesh name="base_vis_1" file="obj_meshes/base_vis/base_vis_1.obj"/>
 
-        <!-- forearm mesh -->	
+        <!-- forearm mesh -->
 	<mesh name="forearm_vis_0" file="obj_meshes/forearm_vis/forearm_vis_0.obj"/>
 	<mesh name="forearm_vis_1" file="obj_meshes/forearm_vis/forearm_vis_1.obj"/>
 	<mesh name="forearm_vis_2" file="obj_meshes/forearm_vis/forearm_vis_2.obj"/>
 	<mesh name="forearm_vis_3" file="obj_meshes/forearm_vis/forearm_vis_3.obj"/>
 
-        <!-- shoulder material and mesh -->	
+        <!-- shoulder material and mesh -->
 	<mesh name="shoulder_vis_0" file="obj_meshes/shoulder_vis/shoulder_vis_0.obj"/>
 	<mesh name="shoulder_vis_1" file="obj_meshes/shoulder_vis/shoulder_vis_1.obj"/>
 	<mesh name="shoulder_vis_2" file="obj_meshes/shoulder_vis/shoulder_vis_2.obj"/>
@@ -37,19 +37,19 @@
 	<mesh name="upperarm_vis_2" file="obj_meshes/upperarm_vis/upperarm_vis_2.obj"/>
 	<mesh name="upperarm_vis_3" file="obj_meshes/upperarm_vis/upperarm_vis_3.obj"/>
 
-        <!-- wrist1 material and mesh -->	
+        <!-- wrist1 material and mesh -->
 	<mesh name="wrist1_vis_0" file="obj_meshes/wrist1_vis/wrist1_vis_0.obj"/>
 	<mesh name="wrist1_vis_1" file="obj_meshes/wrist1_vis/wrist1_vis_1.obj"/>
 	<mesh name="wrist1_vis_2" file="obj_meshes/wrist1_vis/wrist1_vis_2.obj"/>
 
-        <!-- wrist2 material and mesh -->	
+        <!-- wrist2 material and mesh -->
 	<mesh name="wrist2_vis_0" file="obj_meshes/wrist2_vis/wrist2_vis_0.obj"/>
 	<mesh name="wrist2_vis_1" file="obj_meshes/wrist2_vis/wrist2_vis_1.obj"/>
 	<mesh name="wrist2_vis_2" file="obj_meshes/wrist2_vis/wrist2_vis_2.obj"/>
 
-        <!-- wrist3 material and mesh -->	
+        <!-- wrist3 material and mesh -->
 	<mesh name="wrist3_vis" file="obj_meshes/wrist3_vis/wrist3_vis.obj"/>
-	
+
         <mesh name="base" file="meshes/base.stl" />
         <mesh name="shoulder" file="meshes/shoulder.stl" />
         <mesh name="upperarm" file="meshes/upperarm.stl" />
@@ -66,7 +66,7 @@
             <!-- mount attached here -->
 	    <geom mesh="base_vis_0" material="Black" type="mesh" contype="0" conaffinity="0" group="1"/>
 	    <geom mesh="base_vis_1" material="JointGrey" type="mesh" contype="0" conaffinity="0" group="1"/>
- 
+
             <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="base" name="base_col"/>
             <body name="shoulder_link" pos="0 0 0.163">
                 <inertial pos="0 0 0" mass="3.7" diaginertia="0.0102675 0.0102675 0.00666" />

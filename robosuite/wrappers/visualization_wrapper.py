@@ -68,7 +68,12 @@ class VisualizationWrapper(Wrapper):
                 self.indicator_configs.append(indicator_config)
 
         # Create internal dict to store visualization settings (set to True by default)
-        self._vis_settings = {vis: True for vis in self.env._visualizations}
+        # self._vis_settings = {vis: True for vis in self.env._visualizations}
+        self._vis_settings = {vis: True for vis in self.env._visualizations} # setting the grippers to True
+        # self._vis_settings["grippers"] = True
+        # print("----------------------------------------------------------------------------------------------------")
+        # print(self._vis_settings) # robots': False, 'env': False, 'grippers': False}
+        # print("----------------------------------------------------------------------------------------------------")
 
         # Add the post-processor to make sure indicator objects get added to model before it's actually loaded in sim
         self.env.set_xml_processor(processor=self._add_indicators_to_model)

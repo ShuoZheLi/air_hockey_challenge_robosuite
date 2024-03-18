@@ -167,7 +167,7 @@ class AirHockey(SingleArmEnv):
         renderer_config=None,
         initial_qpos=[-0.623, -1.256, 2.431, -2.959, -1.420, -2.122],
     ):
-        
+
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -237,7 +237,7 @@ class AirHockey(SingleArmEnv):
     # self.modder = DynamicsModder(sim=self.sim)
     # self.modder.mod_position("puck", [1, -0.3, 1])
     # self.modder.mod_position("puck_main", [1, -0.3, 1])
-    # self.modder.update()  
+    # self.modder.update()
 
     # gripper position
     # print(self.sim.data.site_xpos[self.robots[0].eef_site_id])
@@ -276,7 +276,7 @@ class AirHockey(SingleArmEnv):
 
         # print(self.sim.model._site_name2id.keys())
 
-        # 
+        #
         # print("puck: ", self.sim.data.get_body_xpos("puck"))
 
         # print("puck_x:", self.sim.data.get_joint_qpos("puck_x"))
@@ -291,7 +291,7 @@ class AirHockey(SingleArmEnv):
         # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
         # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
         puck_vel = self.sim.data.get_body_xvelp("puck")
-        
+
         if puck_vel[0] > 0.75:
             reward = puck_vel[0]
         elif puck_vel[0] > 1.5:
@@ -309,7 +309,7 @@ class AirHockey(SingleArmEnv):
         # goal_pos = self.sim.data.get_body_xpos("puck")
 
         return reward
-    
+
     def _post_action(self, action):
         """
         In addition to super method, add additional info if requested
@@ -322,7 +322,8 @@ class AirHockey(SingleArmEnv):
                 - (dict) info about current env step
         """
         reward, done, info = super()._post_action(action)
-        info = [self.sim.data.site_xpos[self.robots[0].eef_site_id], self.sim.data.get_body_xquat('gripper0_eef'), self.sim.data.get_body_xvelp('gripper0_eef'), self.sim.data.get_body_xvelr('gripper0_eef')]
+        info["validation_data"] = [self.sim.data.site_xpos[self.robots[0].eef_site_id], self.sim.data.get_body_xquat('gripper0_eef'), self.sim.data.get_body_xvelp('gripper0_eef'), self.sim.data.get_body_xvelr('gripper0_eef')]
+        info["puck_pos"] = self.sim.data.get_body_xpos("puck")
         done, reward = self._check_terminated(done, reward, info)
         return reward, done, info
 
@@ -349,11 +350,11 @@ class AirHockey(SingleArmEnv):
 
         self.transform_z = lambda x : self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
         print(self.transform_z(-0.623))
-        
+
         # orientation_error = T.mat2euler(self.sim.data.site_xmat[self.sim.model.site_name2id(self.robots[0].eef_site_id)].reshape([3, 3])) - self.fixed
         if not(gripper_pos[2] > self.transform_z(gripper_pos[0]) + 0.05):
             self.check_off_table = True
-        
+
         if self.check_off_table and gripper_pos[2] > self.transform_z(gripper_pos[0]) + 0.05:
             reward = self.arm_limit_collision_penalty
             info["terminated reason"] = "arm lifted off table"
@@ -368,7 +369,7 @@ class AirHockey(SingleArmEnv):
             print("gripper hand collision happens")
             info["terminated_reason"] = "gripper_hit_table"
             done = True
-        
+
         if self.robots[0].check_q_limits():
             reward = self.arm_limit_collision_penalty
             print("reach joint limits")
@@ -380,7 +381,7 @@ class AirHockey(SingleArmEnv):
             print("puck out of table")
             info["terminated_reason"] = "puck_out_of_table"
             done = True
-        
+
         # if np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])) >= 100:
         #     print("too much force: ", np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])))
         #     reward = self.arm_limit_collision_penalty
@@ -392,14 +393,14 @@ class AirHockey(SingleArmEnv):
             info["terminated_reason"] = "success"
             done = True
         return done, reward
-    
+
     # def _check_success(self):
     #     """
     #     Check if cube has been lifted.
     #     Returns:
     #         bool: True if cube has been lifted
     #     """
-        
+
     #     # gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
     #     print("checks here")
     #     return False
@@ -507,7 +508,7 @@ class AirHockey(SingleArmEnv):
             self.modder.mod_position("base", [0.8, np.random.uniform(-0.3, 0.3), 1.2])
             self.modder.update()
 
-        
+
     def visualize(self, vis_settings):
         """
         In addition to super call, visualize gripper site proportional to the distance to the cube.

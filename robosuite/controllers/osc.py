@@ -118,10 +118,10 @@ class OperationalSpaceController(Controller):
         # output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
         output_max=0.5,
         output_min=-0.5,
-        kp=250,
+        kp=2500,
         damping_ratio=1,
         impedance_mode="variable_kp",
-        kp_limits=(0, 300),
+        kp_limits=(0, 3000000000),
         damping_ratio_limits=(0, 100),
         policy_freq=20,
         position_limits=None,
@@ -140,7 +140,7 @@ class OperationalSpaceController(Controller):
             joint_indexes,
             actuator_range,
         )
- 
+
         self.table_tilt = 0.09
         self.table_elevation = 1
         self.table_x_start = 0.8
@@ -197,7 +197,7 @@ class OperationalSpaceController(Controller):
 
         # limits
         # self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
-        self.position_limits = np.array([[0,-0.433,-10],[0.25,0.433,0]])
+        self.position_limits = np.array([[-0.05,-0.433,-10],[0.25,0.433,0]])
         self.orientation_limits = np.array(orientation_limits) if orientation_limits is not None else orientation_limits
 
         # control frequency
@@ -338,7 +338,7 @@ class OperationalSpaceController(Controller):
         desired_pos[0] += self.x_offset
         # desired_pos[2] = 0.2685 * desired_pos[0] + 0.95
         # desired_pos = np.clip(desired_pos, self.position_limits[0], self.position_limits[1])
-        
+
         if self.interpolator_ori is not None:
             # relative orientation based on difference between current ori and ref
             self.relative_ori = orientation_error(self.ee_ori_mat, self.ori_ref)
