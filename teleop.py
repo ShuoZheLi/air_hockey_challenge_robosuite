@@ -127,6 +127,7 @@ if __name__ == '__main__':
             savePath = "./Datasets/dataset" + str(counter)
             np.save(savePath, np.array(dataset))
             print("Saved dataset" + str(counter))
+            dataset = []
             counter += 1
             env = suite.make(
                 **config,
