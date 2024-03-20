@@ -72,7 +72,8 @@ if __name__ == '__main__':
                    "kp_limits": (0, 10000000),
                    "uncouple_pos_ori": False,
                    "logger": logger},
-              'gripper_types': 'Robotiq85Gripper', }
+              'gripper_types': 'Robotiq85Gripper',
+              'task': "GOAL_REGION"}
 
     env = suite.make(
         **config,
@@ -131,9 +132,13 @@ if __name__ == '__main__':
             # print(obs[-3:], action[6:9])
             # action[6:9] -= obs[-3:]
             obs, reward, done, info, _ = env.step(action[6:] if count > delay else action[6:] * 0)
+            print(reward, done)
             env.render()
             count += 1
             idx %= len(coordinates)
+
+            if done:
+                env.reset()
     except KeyboardInterrupt:
         print("Keyboard Interrupt")
     finally:

@@ -9,6 +9,7 @@ from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.mjcf_utils import CustomMaterial
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler
+import robosuite.utils.transform_utils as T
 from robosuite.utils.transform_utils import convert_quat
 from robosuite.utils.mjmod import DynamicsModder
 
@@ -165,6 +166,7 @@ class AirHockey(SingleArmEnv):
         renderer="mujoco",
         renderer_config=None,
         initial_qpos=[-0.265276, -1.383369, 2.326823, -2.601113, -1.547214, -3.405865],
+        task="JUGGLE_PUCK"
     ):
 
         # settings for table top
@@ -188,7 +190,20 @@ class AirHockey(SingleArmEnv):
         self.arm_limit_collision_penalty = -10
         self.success_reward = 50
         self.old_puck_pos = None
-        # self.goal_pos = [0,0,1]
+        self.goal_region_world = None
+        self.goal_region = None
+        self.goal_vel = None
+
+        self.table_tilt = 0.09
+        self.table_elevation = 1
+        self.table_x_start = 0.8
+        self.transform_z = lambda x: self.table_tilt * (x - self.table_x_start) + self.table_elevation
+
+        table_q = T.axisangle2quat(np.array([0, self.table_tilt, 0]))
+        self.table_transform = T.quat2mat(table_q)
+
+        assert task in ["MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK"]
+        self.task = task
 
         super().__init__(
             robots=robots,
@@ -218,6 +233,12 @@ class AirHockey(SingleArmEnv):
             renderer_config=renderer_config,
         )
 
+        if "GOAL_REGION" in task:
+            self.randomize_goal_location()
+
+        if task == "GOAL_REGION_DESIRED_VELOCITY":
+            self.randomize_goal_vel()
+
     # function bank
     # towards robot negative
     # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
@@ -241,8 +262,48 @@ class AirHockey(SingleArmEnv):
     # gripper position
     # print(self.sim.data.site_xpos[self.robots[0].eef_site_id])
 
+    def randomize_goal_location(self):
+        site = self.sim.model.site_name2id("goal_region")
+
+        spawn_pos_min = np.array([0.4, -0.3])
+        spawn_pos_max = np.array([0.6, 0.3])
+
+        spawn_pos = np.random.uniform(spawn_pos_min, spawn_pos_max)
+        spawn_pos = np.array([spawn_pos[0], spawn_pos[1], self.transform_z(spawn_pos[0])])
+        self.goal_region_world = np.array([spawn_pos[0] + 0.025, spawn_pos[1], self.transform_z(spawn_pos[0] + 0.025)])
+
+        self.sim.model.site_pos[site] = spawn_pos.tolist()
+        self.sim.model.site_rgba[site] = [1, 0, 0, 0.3]
+
+        self.goal_region = np.dot(self.table_transform, spawn_pos)
+
+    def randomize_goal_vel(self):
+        site = self.sim.model.site_name2id("desired_vel")
+
+        vel_min = np.array([0, -0.5])
+        vel_max = np.array([2, 0.5])
+
+        vel = np.random.uniform(vel_min, vel_max)
+        self.goal_vel = np.array([vel[0] * np.cos(vel[1]), vel[0] * np.sin(vel[1])])
+
+        self.sim.model.site_rgba[site] = [0, 0, 1, 0.3]
+
+        quat = T.axisangle2quat(1.480796326794896 * np.array([np.sin(vel[1]), np.cos(vel[1]), 0]))
+        self.sim.model.site_quat[site][0] = quat[3]
+        self.sim.model.site_quat[site][1:] = quat[:3]
+
+        self.sim.model.site_pos[site] = self.goal_region_world
+        print(vel)
+
     def reset(self, ):
-        return super().reset()
+        obs = super().reset()
+        if "GOAL_REGION" in self.task:
+            self.randomize_goal_location()
+
+        if self.task == "GOAL_REGION_DESIRED_VELOCITY":
+            self.randomize_goal_vel()
+
+        return obs
 
     def reward(self, action=None):
         """
@@ -269,7 +330,6 @@ class AirHockey(SingleArmEnv):
         Returns:
             float: reward value
         """
-        reward = 0.0
 
         # print(self.sim.model._site_name2id.keys())
 
@@ -289,15 +349,34 @@ class AirHockey(SingleArmEnv):
         # gripper0_wiping_gripper position
         # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
         # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        puck_vel = self.sim.data.get_body_xvelp("puck")
-        if (puck_vel[0] < 0):
-            reward = puck_vel[0] / 5
+        # puck_vel = self.sim.data.get_body_xvelp("puck")
+        # if (puck_vel[0] < 0):
+        #     reward = puck_vel[0] / 5
+        # else:
+        #     reward = puck_vel[0] * 20
+        #
+        # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        # goal_pos = self.sim.data.get_body_xpos("puck")
+        # reward -= 0.01
+
+        puck_pos = np.dot(self.table_transform, self.sim.data.get_body_xpos("puck"))
+        puck_vel = np.dot(self.table_transform, self.sim.data.get_body_xvelp("puck"))
+
+        if self.task == "MIN_UPWARD_VELOCITY":
+            reward = 20 if puck_vel[0] > 2 else 0
+        elif self.task == "GOAL_REGION":
+            reward = 20 if np.linalg.norm((puck_pos - self.goal_region)[:2]) <= 0.05 else 0
+        elif self.task == "GOAL_REGION_DESIRED_VELOCITY":
+            condition = (np.linalg.norm((puck_pos - self.goal_region)[:2]) <= 0.05 and # Checks if the puck is in the correct region
+             np.abs(np.linalg.norm(puck_vel[:2]) - np.linalg.norm(self.goal_vel[:2])) < 0.3 # Checks if puck velocity has similar magnitude
+             and np.dot(puck_vel[:2], self.goal_vel[:2]) / # Checks if puck velocity is at a similar angle to the goal velocity
+             (np.linalg.norm(puck_vel[:2]) * np.linalg.norm(self.goal_vel[:2])) >= 0.8)
+
+            return 30 if condition else 0
+        elif self.task == "JUGGLE_PUCK":
+            reward = puck_vel[0] * 20 if puck_vel[0] > 0.5 else puck_vel[0] / 5
         else:
-            reward = puck_vel[0] * 20
-        
-        gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        goal_pos = self.sim.data.get_body_xpos("puck")
-        reward -= 0.01
+            return 0
 
         return reward
     
@@ -361,7 +440,7 @@ class AirHockey(SingleArmEnv):
         #     done = True
         # Prematurely terminate if task is success
         if self._check_success():
-            reward = self.success_reward
+            # reward = self.success_reward
             # print("success")
             info["terminated_reason"] = "success"
             done = True
@@ -510,7 +589,23 @@ class AirHockey(SingleArmEnv):
 
         # # cube is higher than the table top above a margin
         # return cube_height > table_height + 0.04
-        return (self.sim.data.get_body_xvelp("puck")[0] > 0.50)
+
+        puck_pos = np.dot(self.table_transform, self.sim.data.get_body_xpos("puck"))
+        puck_vel = np.dot(self.table_transform, self.sim.data.get_body_xvelp("puck"))
+
+        if self.task == "MIN_UPWARD_VELOCITY":
+            return False
+        elif self.task == "GOAL_REGION":
+            return np.linalg.norm((puck_pos - self.goal_region)[:2]) <= 0.04 and puck_vel[0] >= 0
+        elif self.task == "GOAL_REGION_DESIRED_VELOCITY":
+            return (np.linalg.norm((puck_pos - self.goal_region)[:2]) <= 0.05 and
+                    np.abs(np.linalg.norm(puck_vel[:2]) - np.linalg.norm(self.goal_vel[:2])) < 0.3
+                    and np.dot(puck_vel[:2], self.goal_vel[:2]) /
+                    (np.linalg.norm(puck_vel[:2]) * np.linalg.norm(self.goal_vel[:2])) >= 0.8)
+        elif self.task == "JUGGLE_PUCK":
+            return False
+        else:
+            return True
 
     def quat2axisangle(self, quat):
         """
