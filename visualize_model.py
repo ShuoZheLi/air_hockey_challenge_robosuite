@@ -50,13 +50,21 @@ if __name__ == '__main__':
 
     # Create the environment
     def thunk():
-        config = {'env_name': 'AirHockey', 
-            'robots': ['UR5e'], 
-            'controller_configs': 
-                    {'type': 'OSC_POSITION', 
-                    'interpolation': None, 
-                    "impedance_mode" : "fixed"}, 
-            'gripper_types': 'Robotiq85Gripper',}
+        config = {'env_name': 'AirHockey',
+              'robots': ['UR5e'],
+              'controller_configs':
+                  {'type': 'OSC_POSE',
+                   "kp": [150, 150, 150, 150, 150, 150],
+                   "damping_ratio": [1, 1, 1, 1, 1, 1],
+                   'interpolation': 'linear',
+                   "impedance_mode": "fixed",
+                   "control_delta": False,
+                   "ramp_ratio": 1,
+                   "kp_limits": (0, 10000000),
+                   "uncouple_pos_ori": False,
+                #    "logger": logger
+                   },
+              'gripper_types': 'Robotiq85Gripper', }
 
         environment = robosuite.make(
             **config,
@@ -80,7 +88,7 @@ if __name__ == '__main__':
         return environment
 
     # Load the pytorch model stored at a file path and then visualize its performance using the renderer
-    checkpoint = torch.load("runs/AirHockeyHIT__FixController__1__2024-02-08_12-13-14/FixController.cleanrl_model", map_location=torch.device("cpu"))
+    checkpoint = torch.load("runs/AirHockeyHIT__EcstaticHellaLowKp__1__2024-03-15_20-15-56/EcstaticHellaLowKp.cleanrl_model", map_location=torch.device("cpu"))
     successes = 0
     for i in range(100):
         env = thunk()
