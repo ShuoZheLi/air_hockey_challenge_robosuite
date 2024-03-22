@@ -197,7 +197,8 @@ class OperationalSpaceController(Controller):
 
         # limits
         # self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
-        self.position_limits = np.array([[-0.05,-0.433,-10],[0.25,0.433,0]])
+        # self.position_limits = np.array([[-0.05,-0.433,-10],[0.25,0.433,0]])
+        self.position_limits = np.array([[-0.05,-0.43,-10],[0.25,0.43,0]])
         self.orientation_limits = np.array(orientation_limits) if orientation_limits is not None else orientation_limits
 
         # control frequency
