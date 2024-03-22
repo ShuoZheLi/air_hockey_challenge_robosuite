@@ -114,11 +114,11 @@ def make_robosuite_env(idx, capture_video, run_name, gamma):
               'robots': ['UR5e'],
               'controller_configs':
                   {'type': 'OSC_POSE',
-                   "kp": [1000, 1000, 1000, 1000, 1000, 1000],
+                   "kp": [150, 150, 150, 150, 150, 150],
                    "damping_ratio": [1, 1, 1, 1, 1, 1],
                    'interpolation': 'linear',
                    "impedance_mode": "fixed",
-                   "control_delta": False,
+                   "control_delta": True,
                    "ramp_ratio": 1,
                    "kp_limits": (0, 10000000),
                    "uncouple_pos_ori": False,
@@ -182,13 +182,17 @@ class Agent(nn.Module):
     def get_value(self, x):
         return self.critic(x)
 
-    def get_action_and_value(self, x, action=None):
+    def get_action_and_value(self, x, action=None, sigma=None):
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
-        action_std = torch.exp(action_logstd)
+        if sigma is None:
+            action_std = torch.exp(action_logstd)
+        else:
+            action_std = sigma
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
+            # action = probs.mean.detach()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
@@ -255,6 +259,8 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
+    anneal_step_num = args.num_steps * num_updates
+    sigma = 0.5
 
     # Tracking the best success rate achieved
     best_rate = 0
@@ -270,10 +276,14 @@ if __name__ == "__main__":
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
-
+            if anneal_step_num - global_step <= 100_000:
+                sigma = sigma * (100_000/anneal_step_num)
+            else:
+                sigma = sigma * ((anneal_step_num - global_step)/anneal_step_num)
+            sigma = torch.as_tensor([sigma], device=device, dtype=torch.float32)
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs)
+                action, logprob, _, value = agent.get_action_and_value(next_obs, sigma=sigma)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob

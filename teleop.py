@@ -5,7 +5,7 @@ import sys
 
 import numpy as np
 import robosuite as suite
-from air_hockey_challenge_robosuite.foxglove_logging import Logger
+# from air_hockey_challenge_robosuite.foxglove_logging import Logger
 from robosuite.wrappers.visualization_wrapper import VisualizationWrapper
 from robosuite.utils.camera_utils import get_camera_extrinsic_matrix, \
     get_camera_intrinsic_matrix
@@ -58,12 +58,12 @@ if __name__ == '__main__':
     # Create a window
     screen = pygame.display.set_mode(size)
 
-    logger = Logger()
+    # logger = Logger()
     config = {'env_name': 'AirHockey',
               'robots': ['UR5e'],
               'controller_configs':
                   {'type': 'OSC_POSE',
-                   "kp": [700, 700, 700, 700, 700, 700],
+                   "kp": [1000, 1000, 1000, 1000, 1000, 1000],
                    "damping_ratio": [1, 1, 1, 1, 1, 1],
                    'interpolation': 'linear',
                    "impedance_mode": "fixed",
@@ -71,7 +71,8 @@ if __name__ == '__main__':
                    "ramp_ratio": 1,
                    "kp_limits": (0, 10000000),
                    "uncouple_pos_ori": False,
-                   "logger": logger},
+                #    "logger": logger
+                   },
               'gripper_types': 'Robotiq85Gripper', }
 
     env = suite.make(
@@ -137,4 +138,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("Keyboard Interrupt")
     finally:
-        logger.stop()
+        # logger.stop()
+        pass

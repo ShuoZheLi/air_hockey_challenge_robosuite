@@ -149,8 +149,8 @@ class OperationalSpaceController(Controller):
             self.logger = logger
 
         self.table_tilt = 0.09
-        self.table_elevation = 1
-        self.table_x_start = 0.8
+        self.table_elevation = 0.82555175 + 0.35656941 + 0.05
+        self.table_x_start = 1.2
 
         # allow for controller positions to point into the table to increase force
         self.z_offset = 0.01
@@ -204,7 +204,7 @@ class OperationalSpaceController(Controller):
 
         # limits
         # self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
-        self.position_limits = np.array([[-0.1, -0.45, -10], [0.26, 0.45, 0]])
+        self.position_limits = np.array([[0.15,-0.43,-10],[0.43,0.43,10]])
         self.orientation_limits = np.array(orientation_limits) if orientation_limits is not None else orientation_limits
 
         # control frequency
@@ -223,7 +223,7 @@ class OperationalSpaceController(Controller):
         self.relative_ori = np.zeros(3)
         self.ori_ref = None
 
-        self.fixed_ori = trans.euler2mat(np.array([0, math.pi - 0.09, 0]))
+        self.fixed_ori = trans.euler2mat(np.array([0, math.pi - 0.0959931, 0]))
         self.goal_ori = np.array(self.fixed_ori)
 
     def set_goal(self, action, set_pos=None, set_ori=None):
@@ -438,7 +438,7 @@ class OperationalSpaceController(Controller):
         msg["desired_torque"] = desired_torque.tolist()
         msg["desired_force_in_table"] = np.dot(base_in_table[:3, :3].T, desired_force).tolist()
 
-        self.logger.send_message(msg)
+        # self.logger.send_message(msg)
 
         # Compute nullspace matrix (I - Jbar * J) and lambda matrices ((J * M^-1 * J^T)^-1)
         lambda_full, lambda_pos, lambda_ori, nullspace_matrix = opspace_matrices(

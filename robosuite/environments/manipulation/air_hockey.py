@@ -165,9 +165,9 @@ class AirHockey(SingleArmEnv):
         camera_segmentations=None,  # {None, instance, class, element}
         renderer="mujoco",
         renderer_config=None,
-        initial_qpos=[-0.30110915, -0.98201775,  2.4221648,  -3.11343573, -1.54358871, -3.44142301],
+        initial_qpos=[-0.5, -1.2, 1.376, -3.14, -1.420, -2.122],
     ):
-        
+        initial_qpos =  (math.pi / 180 * np.array([-11.4, -63.2, 82.1, -113.2, -88.92, -101.25]))
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -190,7 +190,6 @@ class AirHockey(SingleArmEnv):
         self.success_reward = 50
         self.old_puck_pos = None
         self.check_off_table = False
-        self.fixed_ori = np.array([0,   math.pi - 0.05, 0])
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -288,11 +287,17 @@ class AirHockey(SingleArmEnv):
         # print(eef_angle)
 
         # gripper0_wiping_gripper position
-        print('------')
-        print(self.sim.data.qpos[3:])
-        print('------')
         gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
         puck_vel = self.sim.data.get_body_xvelp("puck")
+        print("----")
+        print(self.sim.data.get_body_xpos("gripper0_eef"))
+        # print(self.sim.data.get_joint_qpos("robot0_shoulder_pan_joint"))
+        # print(self.sim.data.get_joint_qpos("robot0_shoulder_lift_joint"))
+        # print(self.sim.data.get_joint_qpos("robot0_elbow_joint"))
+        # print(self.sim.data.get_joint_qpos("robot0_wrist_1_joint"))
+        # print(self.sim.data.get_joint_qpos("robot0_wrist_2_joint"))
+        # print(self.sim.data.get_joint_qpos("robot0_wrist_3_joint"))
+        print("----")
         # print(f"location: {}")
         # MAXIMIZE HITTING VELOCITY
         if puck_vel[0] > 0.05:
@@ -337,16 +342,15 @@ class AirHockey(SingleArmEnv):
         # Prematurely terminate if contacting the table with the arm
         gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
         self.table_tilt = 0.09
-        self.table_elevation = 1
+        self.table_elevation = 0.8
         self.table_x_start = 0.8
 
         # allow for controller positions to point into the table to increase force
-        self.z_offset = 0.008
+        self.z_offset = 0.
         self.x_offset = self.z_offset / np.tan(self.table_tilt)
         print(self.x_offset)
 
         self.transform_z = lambda x : self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
-        print(self.transform_z(-0.623))
         
         # # orientation_error = T.mat2euler(self.sim.data.site_xmat[self.sim.model.site_name2id(self.robots[0].eef_site_id)].reshape([3, 3])) - self.fixed
         # if not(gripper_pos[2] > self.transform_z(gripper_pos[0]) + 0.05):
