@@ -130,7 +130,7 @@ def make_robosuite_env(idx, capture_video, run_name, gamma):
                         'robot0_joint_pos_sin', 
                         'robot0_joint_vel',
                         'robot0_eef_pos',
-                        'goal_pos'
+                        'puck_pos'
                         ])
 
         if capture_video and idx == 0:

@@ -438,7 +438,7 @@ class OperationalSpaceController(Controller):
         msg["desired_torque"] = desired_torque.tolist()
         msg["desired_force_in_table"] = np.dot(base_in_table[:3, :3].T, desired_force).tolist()
 
-        self.logger.send_message(msg)
+        # self.logger.send_message(msg)
 
         # Compute nullspace matrix (I - Jbar * J) and lambda matrices ((J * M^-1 * J^T)^-1)
         lambda_full, lambda_pos, lambda_ori, nullspace_matrix = opspace_matrices(

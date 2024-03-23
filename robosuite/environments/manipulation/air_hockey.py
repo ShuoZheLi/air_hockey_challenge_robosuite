@@ -13,6 +13,7 @@ import robosuite.utils.transform_utils as T
 from robosuite.utils.transform_utils import convert_quat
 from robosuite.utils.mjmod import DynamicsModder
 
+
 class AirHockey(SingleArmEnv):
     """
     This class corresponds to the lifting task for a single robot arm.
@@ -135,38 +136,38 @@ class AirHockey(SingleArmEnv):
     """
 
     def __init__(
-        self,
-        robots,
-        env_configuration="default",
-        controller_configs=None,
-        gripper_types="default",
-        initialization_noise="default",
-        table_full_size=(0.8, 0.8, 0.05),
-        table_friction=(1.0, 5e-3, 1e-4),
-        use_camera_obs=True,
-        use_object_obs=True,
-        reward_scale=1.0,
-        reward_shaping=False,
-        placement_initializer=None,
-        has_renderer=False,
-        has_offscreen_renderer=True,
-        render_camera="frontview",
-        render_collision_mesh=False,
-        render_visual_mesh=True,
-        render_gpu_device_id=-1,
-        control_freq=20,
-        horizon=1000,
-        ignore_done=False,
-        hard_reset=True,
-        camera_names="agentview",
-        camera_heights=256,
-        camera_widths=256,
-        camera_depths=False,
-        camera_segmentations=None,  # {None, instance, class, element}
-        renderer="mujoco",
-        renderer_config=None,
-        initial_qpos=[-0.265276, -1.383369, 2.326823, -2.601113, -1.547214, -3.405865],
-        task="JUGGLE_PUCK"
+            self,
+            robots,
+            env_configuration="default",
+            controller_configs=None,
+            gripper_types="default",
+            initialization_noise="default",
+            table_full_size=(0.8, 0.8, 0.05),
+            table_friction=(1.0, 5e-3, 1e-4),
+            use_camera_obs=True,
+            use_object_obs=True,
+            reward_scale=1.0,
+            reward_shaping=False,
+            placement_initializer=None,
+            has_renderer=False,
+            has_offscreen_renderer=True,
+            render_camera="frontview",
+            render_collision_mesh=False,
+            render_visual_mesh=True,
+            render_gpu_device_id=-1,
+            control_freq=20,
+            horizon=1000,
+            ignore_done=False,
+            hard_reset=True,
+            camera_names="agentview",
+            camera_heights=256,
+            camera_widths=256,
+            camera_depths=False,
+            camera_segmentations=None,  # {None, instance, class, element}
+            renderer="mujoco",
+            renderer_config=None,
+            initial_qpos=[-0.265276, -1.383369, 2.326823, -2.601113, -1.547214, -3.405865],
+            task="JUGGLE_PUCK"
     ):
 
         # settings for table top
@@ -193,6 +194,7 @@ class AirHockey(SingleArmEnv):
         self.goal_region_world = None
         self.goal_region = None
         self.goal_vel = None
+        self.positive_regions = None
 
         self.table_tilt = 0.09
         self.table_elevation = 1
@@ -202,7 +204,8 @@ class AirHockey(SingleArmEnv):
         table_q = T.axisangle2quat(np.array([0, self.table_tilt, 0]))
         self.table_transform = T.quat2mat(table_q)
 
-        assert task in ["MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK"]
+        assert task in ["MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK",
+                        "POSITIVE_REGION"]
         self.task = task
 
         super().__init__(
@@ -238,6 +241,9 @@ class AirHockey(SingleArmEnv):
 
         if task == "GOAL_REGION_DESIRED_VELOCITY":
             self.randomize_goal_vel()
+
+        if task == "POSITIVE_REGION":
+            self.randomize_positive_regions()
 
     # function bank
     # towards robot negative
@@ -284,7 +290,7 @@ class AirHockey(SingleArmEnv):
         vel_max = np.array([2, 0.5])
 
         vel = np.random.uniform(vel_min, vel_max)
-        self.goal_vel = np.array([vel[0] * np.cos(vel[1]), vel[0] * np.sin(vel[1])])
+        self.goal_vel = np.array([vel[0] * np.cos(vel[1]), vel[0] * np.sin(vel[1]), 0])
 
         self.sim.model.site_rgba[site] = [0, 0, 1, 0.3]
 
@@ -293,7 +299,9 @@ class AirHockey(SingleArmEnv):
         self.sim.model.site_quat[site][1:] = quat[:3]
 
         self.sim.model.site_pos[site] = self.goal_region_world
-        print(vel)
+
+    def randomize_positive_regions(self):
+        self.positive_regions = np.random.choice([0, 1], size=10, p=[0.5, 0.5])
 
     def reset(self, ):
         obs = super().reset()
@@ -302,6 +310,9 @@ class AirHockey(SingleArmEnv):
 
         if self.task == "GOAL_REGION_DESIRED_VELOCITY":
             self.randomize_goal_vel()
+
+        if self.task == "POSITIVE_REGION":
+            self.randomize_positive_regions()
 
         return obs
 
@@ -367,19 +378,24 @@ class AirHockey(SingleArmEnv):
         elif self.task == "GOAL_REGION":
             reward = 20 if np.linalg.norm((puck_pos - self.goal_region)[:2]) <= 0.05 else 0
         elif self.task == "GOAL_REGION_DESIRED_VELOCITY":
-            condition = (np.linalg.norm((puck_pos - self.goal_region)[:2]) <= 0.05 and # Checks if the puck is in the correct region
-             np.abs(np.linalg.norm(puck_vel[:2]) - np.linalg.norm(self.goal_vel[:2])) < 0.3 # Checks if puck velocity has similar magnitude
-             and np.dot(puck_vel[:2], self.goal_vel[:2]) / # Checks if puck velocity is at a similar angle to the goal velocity
-             (np.linalg.norm(puck_vel[:2]) * np.linalg.norm(self.goal_vel[:2])) >= 0.8)
+            condition = (np.linalg.norm(
+                (puck_pos - self.goal_region)[:2]) <= 0.05 and  # Checks if the puck is in the correct region
+                         np.abs(np.linalg.norm(puck_vel[:2]) - np.linalg.norm(
+                             self.goal_vel[:2])) < 0.3  # Checks if puck velocity has similar magnitude
+                         and np.dot(puck_vel[:2], self.goal_vel[
+                                                  :2]) /  # Checks if puck velocity is at a similar angle to the goal velocity
+                         (np.linalg.norm(puck_vel[:2]) * np.linalg.norm(self.goal_vel[:2])) >= 0.8)
 
             return 30 if condition else 0
         elif self.task == "JUGGLE_PUCK":
-            reward = puck_vel[0] * 20 if puck_vel[0] > 0.5 else puck_vel[0] / 5
+            reward = 10 if puck_pos[0] > 0.5 and puck_vel[0] > 0 else -1
+        elif self.task == "POSITIVE_REGION":
+            reward = 0
         else:
             return 0
 
         return reward
-    
+
     def _post_action(self, action):
         """
         In addition to super method, add additional info if requested
@@ -396,7 +412,7 @@ class AirHockey(SingleArmEnv):
         # end_effector_pos = self.sim.data.get_body_xpos('robot0_right_hand')
         # # Update the position of the sphere to match the end effector
         # self.sim.model.body_pos[self.sim.model.body_name2id('robot0_end_effector_sphere')] = end_effector_pos
-        
+
         done, reward = self._check_terminated(done, reward, info)
         return reward, done, info
 
@@ -421,7 +437,7 @@ class AirHockey(SingleArmEnv):
             # print("gripper hand collision happens")
             info["terminated_reason"] = "gripper_hit_table"
             done = True
-        
+
         if self.robots[0].check_q_limits():
             reward = self.arm_limit_collision_penalty
             # print("reach joint limits")
@@ -433,7 +449,7 @@ class AirHockey(SingleArmEnv):
             # print("puck out of table")
             info["terminated_reason"] = "puck_out_of_table"
             done = True
-        
+
         # if np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])) >= 100:
         #     print("too much force: ", np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])))
         #     reward = self.arm_limit_collision_penalty
@@ -445,14 +461,14 @@ class AirHockey(SingleArmEnv):
             info["terminated_reason"] = "success"
             done = True
         return done, reward
-    
+
     # def _check_success(self):
     #     """
     #     Check if cube has been lifted.
     #     Returns:
     #         bool: True if cube has been lifted
     #     """
-        
+
     #     # gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
     #     print("checks here")
     #     return False
@@ -478,7 +494,6 @@ class AirHockey(SingleArmEnv):
 
         # Arena always gets set to zero origin
         mujoco_arena.set_origin([0, 0, 0])
-
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
@@ -523,7 +538,7 @@ class AirHockey(SingleArmEnv):
                 return convert_quat(np.array(self.sim.data.body_xquat[self.cube_body_id]), to="xyzw")
 
             @sensor(modality=modality)
-            def gripper_to_goal_pos(obs_cache):
+            def gripper_to_puck_pos(obs_cache):
                 return (
                     obs_cache[f"{pf}eef_pos"] - obs_cache["goal_pos"]
                     if f"{pf}eef_pos" in obs_cache and "goal_pos" in obs_cache
@@ -531,11 +546,30 @@ class AirHockey(SingleArmEnv):
                 )
 
             @sensor(modality=modality)
-            def goal_pos(obs_cache):
+            def puck_pos(obs_cache):
                 return self.sim.data.get_body_xpos("puck")
 
-            # sensors = [cube_pos, cube_quat, gripper_to_cube_pos]
-            sensors = [goal_pos, gripper_to_goal_pos]
+            @sensor(modality=modality)
+            def puck_velo(obs_cache):
+                return self.sim.data.get_body_xvelp("puck")
+
+            @sensor(modality=modality)
+            def goal_pos(obs_cache):
+                return self.goal_region
+
+            @sensor(modality=modality)
+            def goal_vel(obs_cache):
+                return self.goal_vel
+
+            sensors = [puck_pos, gripper_to_puck_pos]
+
+            # ["MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK"]
+            if "GOAL_REGION" in self.task:
+                sensors.append(goal_pos)
+
+            if self.task == "GOAL_REGION_DESIRED_VELOCITY":
+                sensors.append(goal_vel)
+
             names = [s.__name__ for s in sensors]
 
             # Create observables
@@ -560,7 +594,6 @@ class AirHockey(SingleArmEnv):
             self.modder.mod_position("base", [0.8, np.random.uniform(-0.3, 0.3), 1.2])
             self.modder.update()
 
-        
     def visualize(self, vis_settings):
         """
         In addition to super call, visualize gripper site proportional to the distance to the cube.

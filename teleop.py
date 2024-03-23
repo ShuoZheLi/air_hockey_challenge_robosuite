@@ -41,8 +41,25 @@ def update_window(image):
     pygame.display.flip()
 
 
-def get_observation_data(obs):
-    return cv2.rotate(cv2.resize(np.uint8(obs[:-3].reshape(env.modality_dims['agentview_image'])), size), cv2.ROTATE_90_CLOCKWISE), obs[-3:]
+def unflatten_observation(obs, env):
+    reshaped_arrays = []
+    start = 0
+    for key in env.keys:
+        # Get the shape of the current key
+        shape = env.modality_dims[key]
+        # Calculate the number of elements in this shape
+        num_elements = np.prod(shape)
+        # Reshape the corresponding part of the observation array
+        reshaped_array = obs[start: start + num_elements].reshape(shape)
+        # Add the reshaped array to the list
+        reshaped_arrays.append(reshaped_array)
+        # Move the start index to the end of the current part
+        start += num_elements
+    return reshaped_arrays
+
+
+def reshape_image(img):
+    return cv2.rotate(cv2.resize(img, size), cv2.ROTATE_90_CLOCKWISE)
 
 
 if __name__ == '__main__':
@@ -81,13 +98,12 @@ if __name__ == '__main__':
         has_offscreen_renderer=True,
         render_camera="sideview",
         use_camera_obs=True,
-        use_object_obs=False,
+        use_object_obs=True,
         control_freq=20
     )
 
-
     env = VisualizationWrapper(env)
-    env = GymWrapper(env, keys=['agentview_image', 'robot0_eef_pos'])
+    env = GymWrapper(env, keys=['agentview_image', 'robot0_eef_pos', 'goal_pos'])
 
     intrinsic_mat = get_camera_intrinsic_matrix(env.sim, 'agentview', *size)
     f = 350
@@ -114,25 +130,28 @@ if __name__ == '__main__':
     count = 0
     try:
         while True:
-            screen_image, _ = get_observation_data(obs)
+            unflattened_obs = unflatten_observation(obs, env)
+            screen_image = reshape_image(unflattened_obs[0])
             update_window(screen_image)
 
+            eef_pos = unflattened_obs[1]
+            goal_pos = unflattened_obs[2]
+            print(goal_pos)
             relative_coord = transforms.get_relative_coord(pixel_coord)
             world_coord = transforms.pixel_to_world_coord(np.array(pixel_coord), solve_for_z=True)
-            error = np.array(world_coord[:-1]) - obs[-3:]
-            # print(obs[-3:], world_coord[:-1], error)
+            error = np.array(world_coord[:-1]) - eef_pos
+            # print(eef_pos, world_coord[:-1], error)
             action = np.ones(6)
             if count % freq == 0:
                 idx += 1
             action = np.append(action, world_coord[:-1], axis=0)
             # action = np.append(action, np.array([coordinates[idx % len(coordinates)]]))
             action = np.append(action, np.zeros(3))
-            # TODO Fix this hack
 
-            # print(obs[-3:], action[6:9])
-            # action[6:9] -= obs[-3:]
+            # print(eef_pos, action[6:9])
+            # action[6:9] -= eef_pos
             obs, reward, done, info, _ = env.step(action[6:] if count > delay else action[6:] * 0)
-            print(reward, done)
+            # print(reward, done)
             env.render()
             count += 1
             idx %= len(coordinates)
