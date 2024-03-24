@@ -372,7 +372,7 @@ class AirHockey(SingleArmEnv):
 
         puck_pos = np.dot(self.table_transform, self.sim.data.get_body_xpos("puck"))
         puck_vel = np.dot(self.table_transform, self.sim.data.get_body_xvelp("puck"))
-
+        reward = 0
         if self.task == "MIN_UPWARD_VELOCITY":
             reward = 20 if puck_vel[0] > 2 else 0
         elif self.task == "GOAL_REGION":
@@ -388,7 +388,19 @@ class AirHockey(SingleArmEnv):
 
             return 30 if condition else 0
         elif self.task == "JUGGLE_PUCK":
-            reward = 10 if puck_pos[0] > 0.5 and puck_vel[0] > 0 else -1
+            if puck_vel[0] > 0.75:
+                reward = puck_vel[0]
+            elif puck_vel[0] > 1.5:
+                reward = puck_vel[0] * 2
+            elif puck_vel[0] > 3:
+                reward = puck_vel[0] * 3
+            elif puck_vel[0] > 6:
+                reward = puck_vel[0] * 4
+            elif puck_vel[0] > 12:
+                reward = puck_vel[0] * 10
+            if puck_vel[0] <= 0:
+                reward = -0.2
+                reward = -puck_vel[0]                
         elif self.task == "POSITIVE_REGION":
             reward = 0
         else:

@@ -49,6 +49,8 @@ def parse_args():
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default="HalfCheetah-v4",
         help="the id of the environment")
+    parser.add_argument("--task", type=str, default="JUGGLE_PUCK",
+            help="the task you wish to train")
     parser.add_argument("--total-timesteps", type=int, default=1000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=3e-4,
@@ -107,7 +109,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
     return thunk
 
 
-def make_robosuite_env(idx, capture_video, run_name, gamma):
+def make_robosuite_env(idx, capture_video, run_name, gamma, task):
     def thunk():
         controller_config = load_controller_config(default_controller="OSC_POSITION")
         config = {'env_name': 'AirHockey',
@@ -115,7 +117,8 @@ def make_robosuite_env(idx, capture_video, run_name, gamma):
             'controller_configs': 
                     {'type': 'OSC_POSITION', 
                     'interpolation': None, 
-                    "impedance_mode" : "fixed"}, 
+                    "impedance_mode" : "fixed"},
+            'task': task,
             'gripper_types': 'Robotiq85Gripper',}
 
         env = robosuite.make(
@@ -222,7 +225,7 @@ if __name__ == "__main__":
     # )
 
     envs = gym.vector.SyncVectorEnv(
-        [make_robosuite_env(i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
+        [make_robosuite_env(i, args.capture_video, run_name, args.gamma, args.task) for i in range(args.num_envs)]
     )
 
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
