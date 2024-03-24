@@ -25,6 +25,7 @@ if __name__ == '__main__':
     DATA_LENGTH = 1_000_000
     task = "JUGGLE_PUCK"
     save_path = f"data/{task}.pkl"
+    model_path = "runs/AirHockeyHIT__Juggling1__1__2024-03-23_21-16-48/Juggling1.cleanrl_model"
     
     assert task in ["MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK",
                         "POSITIVE_REGION"]
@@ -38,6 +39,7 @@ if __name__ == '__main__':
                     'interpolation': None, 
                     "impedance_mode" : "fixed"}, 
             'gripper_types': 'Robotiq85Gripper',
+            "task": task
             }
 
         environment = robosuite.make(
@@ -60,7 +62,7 @@ if __name__ == '__main__':
         return environment
 
     # Load the pytorch model stored at a file path and then visualize its performance using the renderer
-    checkpoint = torch.load("runs/AirHockeyHIT__Juggling1__1__2024-03-23_21-16-48/Juggling1.cleanrl_model", map_location=torch.device("cpu"))
+    checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
     elapsed_steps = 0
     while elapsed_steps < DATA_LENGTH:
         env = thunk()
