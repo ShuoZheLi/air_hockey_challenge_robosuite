@@ -140,7 +140,7 @@ if __name__ == '__main__':
             # print(obs[-3:], action[6:9])
             # action[6:9] -= obs[-3:]
             obs, reward, done, truncated, info = env.step(action[6:] if count > delay else action[6:] * 0)
-            dataset.append((world_coord[0], world_coord[1], *tuple(info["puck_pos"]))) # what the camera thinks your mouse location is + puck position (x, y, z)
+            dataset.append((world_coord[0], world_coord[1], *tuple(info["puck_pos"]), *tuple(info["puck_vel"]), *tuple(info["gripper_pos"]), *tuple(info["gripper_vel"]), *tuple(info["joint_pos"]), *tuple(info["joint_vel"]))) # what the camera thinks your mouse location is + puck position (x, y, z)
             env.render()
             count += 1
             idx %= len(coordinates)

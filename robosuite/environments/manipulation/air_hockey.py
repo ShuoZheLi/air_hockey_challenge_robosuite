@@ -327,6 +327,15 @@ class AirHockey(SingleArmEnv):
         reward, done, info = super()._post_action(action)
 
         info["puck_pos"] = self.sim.data.get_body_xpos("puck")
+        info["puck_vel"] = self.sim.data.get_body_xvelp("puck")
+        sites = ["gripper0_ee_x", "gripper0_ee_y", "gripper0_ee_z"]
+        info["gripper_pos"] = [self.sim.data.get_site_xpos(x) for x in sites] # FIXME These are incorrect
+        info["gripper_vel"] = [self.sim.data.get_site_xvelp(x) for x in sites] # FIXME These are incorrect
+        self.robot_joints = self.robots[0].robot_model.joints
+        self._ref_joint_pos_indexes = [self.sim.model.get_joint_qpos_addr(x) for x in self.robot_joints]
+        self._ref_joint_vel_indexes = [self.sim.model.get_joint_qvel_addr(x) for x in self.robot_joints]
+        info["joint_pos"] = [self.sim.data.qpos[x] for x in self._ref_joint_pos_indexes]
+        info["joint_vel"] = [self.sim.data.qvel[x] for x in self._ref_joint_vel_indexes]
 
         done, reward = self._check_terminated(done, reward, info)
         return reward, done, info
