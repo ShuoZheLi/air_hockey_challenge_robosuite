@@ -236,7 +236,7 @@ class AirHockey(SingleArmEnv):
     # self.modder = DynamicsModder(sim=self.sim)
     # self.modder.mod_position("puck", [1, -0.3, 1])
     # self.modder.mod_position("puck_main", [1, -0.3, 1])
-    # self.modder.update()  
+    # self.modder.update()
 
     # gripper position
     # print(self.sim.data.site_xpos[self.robots[0].eef_site_id])
@@ -275,7 +275,7 @@ class AirHockey(SingleArmEnv):
 
         # print(self.sim.model._site_name2id.keys())
 
-        # 
+        #
         # print("puck: ", self.sim.data.get_body_xpos("puck"))
 
         # print("puck_x:", self.sim.data.get_joint_qpos("puck_x"))
@@ -310,9 +310,9 @@ class AirHockey(SingleArmEnv):
             reward = 32
         elif puck_vel[0] > 0.4:
             reward = 64
-        
+
         return reward
-    
+
     def _post_action(self, action):
         """
         In addition to super method, add additional info if requested
@@ -325,7 +325,9 @@ class AirHockey(SingleArmEnv):
                 - (dict) info about current env step
         """
         reward, done, info = super()._post_action(action)
-        
+
+        info["puck_pos"] = self.sim.data.get_body_xpos("puck")
+
         done, reward = self._check_terminated(done, reward, info)
         return reward, done, info
 
@@ -351,38 +353,39 @@ class AirHockey(SingleArmEnv):
         print(self.x_offset)
 
         self.transform_z = lambda x : self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
-        
+
         # # orientation_error = T.mat2euler(self.sim.data.site_xmat[self.sim.model.site_name2id(self.robots[0].eef_site_id)].reshape([3, 3])) - self.fixed
         # if not(gripper_pos[2] > self.transform_z(gripper_pos[0]) + 0.05):
         #     self.check_off_table = True
-        
+
         # if self.check_off_table and gripper_pos[2] > self.transform_z(gripper_pos[0]) + 0.05:
         #     reward = self.arm_limit_collision_penalty
         #     info["terminated reason"] = "arm lifted off table"
         #     done = True
-        if self.check_contact(self.robots[0].robot_model):
-            reward = self.arm_limit_collision_penalty
-            print("arm collision happens")
-            info["terminated_reason"] = "arm_hit_table"
-            done = True
+        # if self.check_contact(self.robots[0].robot_model):
+        #     reward = self.arm_limit_collision_penalty
+        #     print("arm collision happens")
+        #     info["terminated_reason"] = "arm_hit_table"
+        #     done = True
         if self.check_contact("gripper0_hand_collision"):
             reward = self.arm_limit_collision_penalty
             print("gripper hand collision happens")
             info["terminated_reason"] = "gripper_hit_table"
             done = True
-        
+
         if self.robots[0].check_q_limits():
             reward = self.arm_limit_collision_penalty
             print("reach joint limits")
             info["terminated_reason"] = "arm_limit"
             done = True
 
-        if self.sim.data.get_body_xpos("puck")[0] < -0.1:
+        # if self.sim.data.get_body_xpos("puck")[0] < -0.1:
+        if self.sim.data.get_body_xpos("puck")[0] < 0.12:
             reward = self.arm_limit_collision_penalty
             print("puck out of table")
             info["terminated_reason"] = "puck_out_of_table"
             done = True
-        
+
         # if np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])) >= 100:
         #     print("too much force: ", np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])))
         #     reward = self.arm_limit_collision_penalty
@@ -394,14 +397,14 @@ class AirHockey(SingleArmEnv):
             info["terminated_reason"] = "success"
             done = True
         return done, reward
-    
+
     # def _check_success(self):
     #     """
     #     Check if cube has been lifted.
     #     Returns:
     #         bool: True if cube has been lifted
     #     """
-        
+
     #     # gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
     #     print("checks here")
     #     return False
@@ -509,7 +512,7 @@ class AirHockey(SingleArmEnv):
             self.modder.mod_position("base", [0.8, np.random.uniform(-0.3, 0.3), 1.2])
             self.modder.update()
 
-        
+
     def visualize(self, vis_settings):
         """
         In addition to super call, visualize gripper site proportional to the distance to the cube.

@@ -13,6 +13,7 @@ from robosuite.utils.RobosuiteTransforms import RobosuiteTransforms
 from robosuite.wrappers import GymWrapper
 
 import cv2
+import os
 
 
 def image_to_pygame(image):
@@ -90,9 +91,10 @@ if __name__ == '__main__':
     env = GymWrapper(env, keys=['agentview_image', 'robot0_eef_pos'])
 
     intrinsic_mat = get_camera_intrinsic_matrix(env.sim, 'agentview', *size)
-    f = 350
-    intrinsic_mat = np.array([[f, 0, 500],
-                              [0, f, 500],
+    f = 350 # focal length
+    c = 500 # center point
+    intrinsic_mat = np.array([[f, 0, c],
+                              [0, f, c],
                               [0, 0, 1]])
     extrinsic_mat = get_camera_extrinsic_matrix(env.sim, 'agentview')
     extrinsic_mat = np.linalg.inv(extrinsic_mat)
@@ -112,6 +114,12 @@ if __name__ == '__main__':
     delay = 0
     freq = 8
     count = 0
+
+    datasetCounter = 1
+    for file in os.listdir("./Datasets"):
+        if file.endswith(".npy"):
+            datasetCounter += 1
+    dataset = []
     try:
         while True:
             screen_image, _ = get_observation_data(obs)
@@ -131,12 +139,40 @@ if __name__ == '__main__':
 
             # print(obs[-3:], action[6:9])
             # action[6:9] -= obs[-3:]
-            obs, reward, done, info, _ = env.step(action[6:] if count > delay else action[6:] * 0)
+            obs, reward, done, truncated, info = env.step(action[6:] if count > delay else action[6:] * 0)
+            dataset.append((world_coord[0], world_coord[1], *tuple(info["puck_pos"]))) # what the camera thinks your mouse location is + puck position (x, y, z)
             env.render()
             count += 1
             idx %= len(coordinates)
+
+            if (done):
+                savePath = "./Datasets/dataset" + str(datasetCounter)
+                np.save(savePath, np.array(dataset))
+                print("Saved dataset" + str(datasetCounter))
+                dataset = []
+                datasetCounter += 1
+                env = suite.make(
+                        **config,
+                        has_renderer=True,
+                        has_offscreen_renderer=True,
+                        render_camera="sideview",
+                        use_camera_obs=True,
+                        use_object_obs=False,
+                        control_freq=20
+                    )
+                env = VisualizationWrapper(env)
+                env = GymWrapper(env, keys=['agentview_image', 'robot0_eef_pos'])
+
+            print(len(dataset))
+            if len(dataset) > 999:
+                break
+
     except KeyboardInterrupt:
         print("Keyboard Interrupt")
     finally:
         # logger.stop()
         pass
+
+    savePath = "./Datasets/dataset" + str(datasetCounter)
+    np.save(savePath, np.array(dataset))
+    print("Saved dataset" + str(datasetCounter))
