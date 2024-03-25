@@ -471,7 +471,13 @@ class AirHockey(SingleArmEnv):
             # print("puck out of table")
             info["terminated_reason"] = "puck_out_of_table"
             done = True
-
+        puck_pos = self.sim.data.get_body_xpos("puck")
+        gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        if np.allclose(puck_pos[0:2], gripper_pos[0:2], atol=0.05) and gripper_pos[2] <= puck_pos[2] - 0.02:
+            reward = self.arm_limit_collision_penalty
+            info["terminated_reason"] = "paddle_on_puck"
+            print("PADDLE ON PUCK")
+            done = True
         # if np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])) >= 100:
         #     print("too much force: ", np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])))
         #     reward = self.arm_limit_collision_penalty
