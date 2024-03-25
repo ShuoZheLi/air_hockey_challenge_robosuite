@@ -90,7 +90,7 @@ if __name__ == '__main__':
                    "uncouple_pos_ori": False,
                    "logger": logger},
               'gripper_types': 'Robotiq85Gripper',
-              'task': "GOAL_REGION"}
+              'task': "REACHING"}
 
     env = suite.make(
         **config,
@@ -135,8 +135,8 @@ if __name__ == '__main__':
             update_window(screen_image)
 
             eef_pos = unflattened_obs[1]
-            goal_pos = unflattened_obs[2]
-            print(goal_pos)
+            # goal_pos = unflattened_obs[2]
+            # print(goal_pos)
             relative_coord = transforms.get_relative_coord(pixel_coord)
             world_coord = transforms.pixel_to_world_coord(np.array(pixel_coord), solve_for_z=True)
             error = np.array(world_coord[:-1]) - eef_pos
@@ -151,7 +151,7 @@ if __name__ == '__main__':
             # print(eef_pos, action[6:9])
             # action[6:9] -= eef_pos
             obs, reward, done, info, _ = env.step(action[6:] if count > delay else action[6:] * 0)
-            # print(reward, done)
+            print(reward, done)
             env.render()
             count += 1
             idx %= len(coordinates)
