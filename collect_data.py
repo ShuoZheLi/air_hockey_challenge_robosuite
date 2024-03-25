@@ -13,11 +13,11 @@ import pickle
 if __name__ == '__main__':
 
     SAVED_DATA = {
-        "states": [],
+        "observations": [],
         "actions": [],
-        "next_states": [],
+        "next_observations": [],
         "rewards": [],
-        "dones": [],
+        "terminals": [],
         "terminates": [],
         "infos": []
     }
@@ -87,7 +87,7 @@ if __name__ == '__main__':
             obs = obs[None, :]
 
             action, _, _, _ = agent.get_action_and_value(torch.Tensor(obs))
-            SAVED_DATA['states'].append(obs)
+            SAVED_DATA['observations'].append(obs)
             SAVED_DATA['actions'].append(action)
             
             # in our env, done determines end, there is no truncated (it just returns False in the wrapper)
@@ -99,9 +99,9 @@ if __name__ == '__main__':
             elif done:
                 terminated = True
 
-            SAVED_DATA['next_states'].append(obs)
+            SAVED_DATA['next_observations'].append(obs)
             SAVED_DATA['rewards'].append(reward)
-            SAVED_DATA['dones'].append(done)
+            SAVED_DATA['terminals'].append(done)
             SAVED_DATA['terminates'].append(terminated)
             SAVED_DATA['infos'].append(info)
             ret += reward
@@ -113,6 +113,8 @@ if __name__ == '__main__':
 
     os.makedirs(save_path, exist_ok=True)
     with open(save_path, 'wb') as file:
+        for key in SAVED_DATA.keys():
+            SAVED_DATA[key] = np.array(SAVED_DATA[key])
         pickle.dump(SAVED_DATA, file)
     
     print(f"Data has been saved to {save_path}")
