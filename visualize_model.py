@@ -70,7 +70,7 @@ if __name__ == '__main__':
                         'robot0_joint_pos_sin', 
                         'robot0_joint_vel',
                         'robot0_eef_pos',
-                        'goal_pos'
+                        'puck_pos'
                         ])
         environment = gym.wrappers.FlattenObservation(environment)  # deal with dm_control's Dict observation space
         environment = gym.wrappers.RecordEpisodeStatistics(environment)
@@ -80,7 +80,7 @@ if __name__ == '__main__':
         return environment
 
     # Load the pytorch model stored at a file path and then visualize its performance using the renderer
-    checkpoint = torch.load("runs/AirHockeyHIT__FixController__1__2024-02-08_12-13-14/FixController.cleanrl_model", map_location=torch.device("cpu"))
+    checkpoint = torch.load("runs/AirHockeyHIT__Juggling1__1__2024-03-23_21-16-48/Juggling1.cleanrl_model", map_location=torch.device("cpu"))
     successes = 0
     for i in range(100):
         env = thunk()
@@ -106,6 +106,8 @@ if __name__ == '__main__':
 
             action, _, _, _ = agent.get_action_and_value(torch.Tensor(obs))
             obs, reward, termination, truncation, infos = env.step(action.numpy().squeeze())  # play action
+
+
             done = termination or truncation
             env.render()
             ret += reward
