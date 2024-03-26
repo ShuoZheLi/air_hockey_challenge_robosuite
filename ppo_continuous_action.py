@@ -309,8 +309,8 @@ if __name__ == "__main__":
                     successes += 1
                 num_eps += 1
 
-            if num_eps == 10:
-                success_rate = successes / 10
+            if num_eps >= 10:
+                success_rate = successes / num_eps
                 num_eps = 0
                 successes = 0
                 writer.add_scalar("charts/success_rate", success_rate, global_step)
