@@ -315,15 +315,15 @@ if __name__ == "__main__":
                 successes = 0
                 writer.add_scalar("charts/success_rate", success_rate, global_step)
             
-            current_rate = success_rate
-            if success_rate >= best_rate - 0.1:
-                best_rate = max(current_rate, best_rate)
-                # Save a checkpoint of the model with highest success rate
-                model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
-                os.makedirs(os.path.dirname(model_path), exist_ok=True) 
-                torch.save(agent.state_dict(), model_path)
-                print(f"model saved to {model_path} with success rate: {best_rate}, num eps: {num_eps}")
-            print(f"success rate: {current_rate}")
+                current_rate = success_rate
+                if success_rate >= best_rate - 0.1:
+                    best_rate = max(current_rate, best_rate)
+                    # Save a checkpoint of the model with highest success rate
+                    model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
+                    os.makedirs(os.path.dirname(model_path), exist_ok=True) 
+                    torch.save(agent.state_dict(), model_path)
+                    print(f"model saved to {model_path} with success rate: {best_rate}, num eps: {num_eps}")
+                print(f"success rate: {current_rate}")
 
         # bootstrap value if not done
         with torch.no_grad():
