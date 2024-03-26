@@ -51,7 +51,7 @@ def parse_args():
         help="the id of the environment")
     parser.add_argument("--task", type=str, default="JUGGLE_PUCK",
             help="the task you wish to train")
-    parser.add_argument("--total-timesteps", type=int, default=1000000,
+    parser.add_argument("--total-timesteps", type=int, default=1_000_000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=3e-4,
         help="the learning rate of the optimizer")
@@ -178,11 +178,10 @@ class Agent(nn.Module):
     def get_value(self, x):
         return self.critic(x)
 
-    def get_action_and_value(self, x, action=None):
+    def get_action_and_value(self, x, sigma, action=None):
         action_mean = self.actor_mean(x)
-        action_logstd = self.actor_logstd.expand_as(action_mean)
-        action_std = torch.exp(action_logstd)
-        probs = Normal(action_mean, action_std)
+        sigma = sigma * torch.ones(action_mean.shape)
+        probs = Normal(action_mean, sigma)
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
@@ -251,25 +250,36 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
+    # Noise annealing
+    anneal_step_num = 100_000_000
+    sigma = 1.0
 
     # Tracking the best success rate achieved
+    successes = 0
+    num_eps = 0
+    success_rate = 0
     best_rate = 0
-    
     for update in range(1, num_updates + 1):
+        
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-
+        
         for step in range(0, args.num_steps):
+            
+            sigma = -global_step/(args.total_timesteps) + 1.0001
+            
+            sigma = torch.as_tensor([sigma], device=device, dtype=torch.float32)
+
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs)
+                action, logprob, _, value = agent.get_action_and_value(next_obs, sigma)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -285,8 +295,7 @@ if __name__ == "__main__":
             # Only print when at least 1 env is done
             if "final_info" not in infos:
                 continue
-            num_eps = 0
-            total_successes = 0
+            
             for info in infos["final_info"]:
                 # Skip the envs that are not done
                 if info is None:
@@ -297,10 +306,17 @@ if __name__ == "__main__":
                 writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
                 
                 if "terminated_reason" in info.keys() and info["terminated_reason"] == "success":
-                    total_successes += 1
-            current_rate = total_successes / num_eps
+                    successes += 1
+                num_eps += 1
+
+            if num_eps == 10:
+                success_rate = successes / 10
+                num_eps = 0
+                successes = 0
+                writer.add_scalar("charts/success_rate", success_rate, global_step)
             
-            if current_rate >= best_rate - 0.1:
+            current_rate = success_rate
+            if success_rate >= best_rate - 0.1:
                 best_rate = max(current_rate, best_rate)
                 # Save a checkpoint of the model with highest success rate
                 model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
@@ -342,7 +358,7 @@ if __name__ == "__main__":
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], sigma, action=b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
