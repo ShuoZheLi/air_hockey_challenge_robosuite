@@ -170,6 +170,8 @@ class AirHockey(SingleArmEnv):
             task="JUGGLE_PUCK"
     ):
 
+        self.prev_puck_vel = None
+
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -392,7 +394,14 @@ class AirHockey(SingleArmEnv):
         elif self.task == "GOAL_REGION":
             reward = 20 if np.linalg.norm((puck_pos - self.goal_region)[:2]) <= 0.05 else -np.linalg.norm((puck_pos - self.goal_region)[:2])
         elif self.task == "GOAL_X":
-            reward = 20 if puck_pos[0] > self.goal_x else (puck_pos[0] - self.goal_x)
+            reward += 100 if puck_pos[0] > self.goal_x else 0
+            if self.prev_puck_vel:
+                reward += 20 * (puck_vel[0] - self.prev_puck_vel[0])
+            self.prev_puck_vel = puck_vel
+
+            reward += 40 * puck_vel[0]
+            reward += 10 / np.linalg.norm(puck_pos[:2] - gripper_pos[:2])
+
         elif self.task == "GOAL_REGION_DESIRED_VELOCITY":
             condition = (np.linalg.norm(
                 (puck_pos - self.goal_region)[:2]) <= 0.05 and  # Checks if the puck is in the correct region
