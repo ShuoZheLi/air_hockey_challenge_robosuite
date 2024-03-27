@@ -56,7 +56,9 @@ if __name__ == '__main__':
                     {'type': 'OSC_POSITION', 
                     'interpolation': None, 
                     "impedance_mode" : "fixed"}, 
-            'gripper_types': 'Robotiq85Gripper',}
+            'gripper_types': 'Robotiq85Gripper',
+            'task': 'REACHING'
+            }
 
         environment = robosuite.make(
             **config,
@@ -80,7 +82,7 @@ if __name__ == '__main__':
         return environment
 
     # Load the pytorch model stored at a file path and then visualize its performance using the renderer
-    checkpoint = torch.load("runs/AirHockeyHIT__Juggling1__1__2024-03-23_21-16-48/Juggling1.cleanrl_model", map_location=torch.device("cpu"))
+    checkpoint = torch.load("runs/GOAL_X_1.cleanrl_model", map_location=torch.device("cpu"))
     successes = 0
     for i in range(100):
         env = thunk()
@@ -104,7 +106,7 @@ if __name__ == '__main__':
             # add dimension to obs
             obs = obs[None, :]
 
-            action, _, _, _ = agent.get_action_and_value(torch.Tensor(obs))
+            action, _, _, _ = agent.get_action_and_value(torch.Tensor(obs), 0.001)
             obs, reward, termination, truncation, infos = env.step(action.numpy().squeeze())  # play action
 
 
