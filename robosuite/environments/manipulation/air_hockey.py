@@ -328,9 +328,8 @@ class AirHockey(SingleArmEnv):
 
         info["puck_pos"] = self.sim.data.get_body_xpos("puck")
         info["puck_vel"] = self.sim.data.get_body_xvelp("puck")
-        sites = ["gripper0_ee_x", "gripper0_ee_y", "gripper0_ee_z"]
-        info["gripper_pos"] = [self.sim.data.get_site_xpos(x) for x in sites] # FIXME These are incorrect
-        info["gripper_vel"] = [self.sim.data.get_site_xvelp(x) for x in sites] # FIXME These are incorrect
+        info["gripper_pos"] = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        info["gripper_vel"] = self.sim.data.get_body_xvelp("gripper0_eef")
         self.robot_joints = self.robots[0].robot_model.joints
         self._ref_joint_pos_indexes = [self.sim.model.get_joint_qpos_addr(x) for x in self.robot_joints]
         self._ref_joint_vel_indexes = [self.sim.model.get_joint_qvel_addr(x) for x in self.robot_joints]
