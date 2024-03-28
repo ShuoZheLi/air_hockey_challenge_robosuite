@@ -382,6 +382,7 @@ class AirHockey(SingleArmEnv):
         puck_vel = np.dot(self.table_transform, self.sim.data.get_body_xvelp("puck"))
         gripper_pos = np.dot(self.table_transform, self.sim.data.site_xpos[self.robots[0].eef_site_id])
         gripper_vel = self.sim.data.get_body_xvelp("gripper0_eef")
+        print(f"dist: {np.linalg.norm((gripper_pos - self.goal_region)[:2])}")
         reward = 0
         if self.task == "TOUCHING_PUCK":
             reward = 10 if np.linalg.norm(puck_pos[:2] - gripper_pos[:2]) < 0.1 and gripper_vel[0] > 0.02 else 0
@@ -477,11 +478,11 @@ class AirHockey(SingleArmEnv):
             info["terminated_reason"] = "arm_limit"
             done = True
 
-        # if self.sim.data.get_body_xpos("puck")[0] < -0.1:
-        #     reward = self.arm_limit_collision_penalty
-        #     # print("puck out of table")
-        #     info["terminated_reason"] = "puck_out_of_table"
-        #     done = True
+        if self.sim.data.get_body_xpos("puck")[0] < -0.1:
+            reward = self.arm_limit_collision_penalty
+            # print("puck out of table")
+            info["terminated_reason"] = "puck_out_of_table"
+            done = True
 
         puck_pos = self.sim.data.get_body_xpos("puck")
         gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]

@@ -82,7 +82,7 @@ if __name__ == '__main__':
         return environment
 
     # Load the pytorch model stored at a file path and then visualize its performance using the renderer
-    checkpoint = torch.load("runs/GOAL_X_2_ctd.cleanrl_model", map_location=torch.device("cpu"))
+    checkpoint = torch.load("runs/GOAL_X_1.cleanrl_model", map_location=torch.device("cpu"))
     successes = 0
     for i in range(100):
         env = thunk()
