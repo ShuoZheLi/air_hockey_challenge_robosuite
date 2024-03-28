@@ -38,12 +38,11 @@ LOG_STD_MAX = 2.0
 class TrainConfig:
     # Experiment
     device: str = "cuda"
-    env: str = "halfcheetah-medium-expert-v2"  # OpenAI gym environment name
+    env: str = "TOUCHING_PUCK_default"  # OpenAI gym environment name
     seed: int = 0  # Sets Gym, PyTorch and Numpy seeds
     eval_freq: int = int(5e3)  # How often (time steps) we evaluate
     n_episodes: int = 10  # How many episodes run during evaluation
     max_timesteps: int = int(1e6)  # Max time steps to run environment
-    checkpoints_path: Optional[str] = None  # Save path
     load_model: str = ""  # Model load file name, "" doesn't load
     # IQL
     buffer_size: int = 2_000_000  # Replay buffer size
@@ -53,16 +52,19 @@ class TrainConfig:
     beta: float = 3.0  # Inverse temperature. Small beta -> BC, big beta -> maximizing Q
     iql_tau: float = 0.7  # Coefficient for asymmetric loss
     iql_deterministic: bool = False  # Use deterministic actor
+    # iql_deterministic: bool = True  # Use deterministic actor
     normalize: bool = True  # Normalize states
+    # normalize: bool = False  # Normalize states
     normalize_reward: bool = False  # Normalize reward
     vf_lr: float = 3e-4  # V function learning rate
     qf_lr: float = 3e-4  # Critic learning rate
     actor_lr: float = 3e-4  # Actor learning rate
     actor_dropout: Optional[float] = None  # Adroit uses dropout for policy network
     # Wandb logging
-    project: str = "CORL"
-    group: str = "IQL-D4RL"
-    name: str = "IQL"
+    project: str = "TOUCHING_PUCK_bc"
+    group: str = "TOUCHING_PUCK_bc"
+    name: str = "TOUCHING_PUCK_bc"
+    checkpoints_path: Optional[str] = "TOUCHING_PUCK_bc"  # Save path
 
     def __post_init__(self):
         self.name = f"{self.name}-{self.env}-{str(uuid.uuid4())[:8]}"
@@ -93,6 +95,8 @@ def wrap_env(
 ) -> gym.Env:
     # PEP 8: E731 do not assign a lambda expression, use a def
     def normalize_state(state):
+
+        # import pdb; pdb.set_trace()
         return (
             state - state_mean
         ) / state_std  # epsilon should be already added in std.
@@ -204,8 +208,8 @@ def eval_actor(
     episode_rewards = []
     for epi in range(n_episodes):
         state, _ = env.reset()
-        if epi == 0:
-            print(state)
+        # if epi == 0:
+        #     print(state)
         done = False
         episode_reward = 0.0
         while not done:
@@ -553,6 +557,7 @@ def thunk(task='JUGGLE_PUCK'):
                         'robot0_joint_pos_sin', 
                         'robot0_joint_vel',
                         'robot0_eef_pos',
+                        'puck_pos',
                         # 'goal_pos'
                         ])
         environment = gym.wrappers.FlattenObservation(environment)  # deal with dm_control's Dict observation space
@@ -565,21 +570,32 @@ def thunk(task='JUGGLE_PUCK'):
 @pyrallis.wrap()
 def train(config: TrainConfig):
 
-    env = thunk(task = 'GOAL_REGION_DESIRED_VELOCITY')
+    env = thunk(task = 'TOUCHING_PUCK')
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
     max_action = float(env.action_space.high[0])
 
+    # import pdb; pdb.set_trace()
 
 
-    # dataset = pickle.load(open('data.pkl', 'rb'))
-    dataset = {}
-    dataset["observations"] = np.random.rand(1000, state_dim)
-    dataset["actions"] = np.random.rand(1000, action_dim)
-    dataset["rewards"] = np.random.rand(1000)
-    dataset["next_observations"] = np.random.rand(1000, state_dim)
-    dataset["terminals"] = np.random.rand(1000)
-    dataset["terminates"] = np.random.rand(1000)
+
+    dataset = pickle.load(open('TOUCHING_PUCK_1M.pkl', 'rb'))
+
+    dataset["next_observations"] = np.squeeze(dataset["next_observations"], axis=1)
+    dataset["rewards"] = np.squeeze(dataset["rewards"], axis=1)
+    dataset["terminals"] = np.squeeze(dataset["terminals"], axis=1)
+    dataset["terminates"] = np.expand_dims(dataset["terminates"], axis=1)
+
+    # env.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(state_dim,), dtype=np.float32)
+
+    # import pdb; pdb.set_trace()
+    # dataset = {}
+    # dataset["observations"] = np.random.rand(1000, state_dim)
+    # dataset["actions"] = np.random.rand(1000, action_dim)
+    # dataset["rewards"] = np.random.rand(1000)
+    # dataset["next_observations"] = np.random.rand(1000, state_dim)
+    # dataset["terminals"] = np.random.rand(1000)
+    # dataset["terminates"] = np.random.rand(1000)
 
 
     if config.normalize_reward:
@@ -587,16 +603,25 @@ def train(config: TrainConfig):
 
     if config.normalize:
         state_mean, state_std = compute_mean_std(dataset["observations"], eps=1e-3)
-    else:
-        state_mean, state_std = 0, 1
-
-    dataset["observations"] = normalize_states(
+        dataset["observations"] = normalize_states(
         dataset["observations"], state_mean, state_std
-    )
-    dataset["next_observations"] = normalize_states(
-        dataset["next_observations"], state_mean, state_std
-    )
-    env = wrap_env(env, state_mean=state_mean, state_std=state_std)
+        )
+        dataset["next_observations"] = normalize_states(
+            dataset["next_observations"], state_mean, state_std
+        )
+        env = wrap_env(env, state_mean=state_mean, state_std=state_std)
+
+        
+    # else:
+    #     state_mean, state_std = 0, 1
+
+    # dataset["observations"] = normalize_states(
+    #     dataset["observations"], state_mean, state_std
+    # )
+    # dataset["next_observations"] = normalize_states(
+    #     dataset["next_observations"], state_mean, state_std
+    # )
+    # env = wrap_env(env, state_mean=state_mean, state_std=state_std)
 
 
     replay_buffer = ReplayBuffer(

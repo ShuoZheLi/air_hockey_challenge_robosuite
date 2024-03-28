@@ -204,7 +204,7 @@ class AirHockey(SingleArmEnv):
         table_q = T.axisangle2quat(np.array([0, self.table_tilt, 0]))
         self.table_transform = T.quat2mat(table_q)
 
-        assert task in ["TOUCHING_PUCK", "REACHING", "MIN_UPWARD_VELOCITY", "GOAL_REGION",
+        assert task in ["TOUCHING_PUCK", "REACHING", "MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_X",
                         "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK", "POSITIVE_REGION"]
         self.task = task
 
@@ -318,6 +318,10 @@ class AirHockey(SingleArmEnv):
         if self.task == "POSITIVE_REGION":
             self.randomize_positive_regions()
 
+        if self.task == "GOAL_X":
+            self.goal_x = 1.4
+            self.prev_puck_dist = None
+
         return obs
 
     def reward(self, action=None):
@@ -382,11 +386,18 @@ class AirHockey(SingleArmEnv):
         if self.task == "TOUCHING_PUCK":
             reward = 10 if np.linalg.norm(puck_pos[:2] - gripper_pos[:2]) < 0.1 and gripper_vel[0] > 0.02 else 0
         elif self.task == "REACHING":
-            reward = 20 if np.linalg.norm((gripper_pos - self.goal_region)[:2]) <= 0.05 else 0
+            reward = self.success_reward if np.linalg.norm((gripper_pos - self.goal_region)[:2]) <= 0.05 else 0
         elif self.task == "MIN_UPWARD_VELOCITY":
             reward = 20 if puck_vel[0] > 2 else -1
         elif self.task == "GOAL_REGION":
             reward = 20 if np.linalg.norm((puck_pos - self.goal_region)[:2]) <= 0.05 else -np.linalg.norm((puck_pos - self.goal_region)[:2])
+        elif self.task == "GOAL_X":
+            curr_dist = self.goal_x - puck_pos[0]
+            if self.prev_puck_dist is not None:
+                reward += -(curr_dist - self.prev_puck_dist)
+            self.prev_puck_dist = curr_dist
+            if puck_pos[0] > self.goal_x:
+                reward = 100
         elif self.task == "GOAL_REGION_DESIRED_VELOCITY":
             condition = (np.linalg.norm(
                 (puck_pos - self.goal_region)[:2]) <= 0.05 and  # Checks if the puck is in the correct region
@@ -466,14 +477,15 @@ class AirHockey(SingleArmEnv):
             info["terminated_reason"] = "arm_limit"
             done = True
 
-        if self.sim.data.get_body_xpos("puck")[0] < -0.1:
-            reward = self.arm_limit_collision_penalty
-            # print("puck out of table")
-            info["terminated_reason"] = "puck_out_of_table"
-            done = True
+        # if self.sim.data.get_body_xpos("puck")[0] < -0.1:
+        #     reward = self.arm_limit_collision_penalty
+        #     # print("puck out of table")
+        #     info["terminated_reason"] = "puck_out_of_table"
+        #     done = True
+
         puck_pos = self.sim.data.get_body_xpos("puck")
         gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        if np.allclose(puck_pos[0:2], gripper_pos[0:2], atol=0.05) and gripper_pos[2] <= puck_pos[2] - 0.02:
+        if np.allclose(puck_pos[0:2], gripper_pos[0:2], atol=0.05) and gripper_pos[2] <= puck_pos[2] - 0.2:
             reward = self.arm_limit_collision_penalty
             info["terminated_reason"] = "paddle_on_puck"
             print("PADDLE ON PUCK")
@@ -667,6 +679,8 @@ class AirHockey(SingleArmEnv):
                     np.abs(np.linalg.norm(puck_vel[:2]) - np.linalg.norm(self.goal_vel[:2])) < 0.3
                     and np.dot(puck_vel[:2], self.goal_vel[:2]) /
                     (np.linalg.norm(puck_vel[:2]) * np.linalg.norm(self.goal_vel[:2])) >= 0.8)
+        elif self.task == "GOAL_X":
+            return puck_pos[0] > self.goal_x
         elif self.task == "JUGGLE_PUCK":
             return False
         else:
