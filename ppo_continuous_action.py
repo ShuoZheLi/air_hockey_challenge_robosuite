@@ -47,9 +47,10 @@ def parse_args():
                         help="File path for the checkpoint file to load model from")
 
     # Algorithm specific arguments
-    parser.add_argument("--env-id", type=str, default="HalfCheetah-v4",
+    # parser.add_argument("--env-id", type=str, default="neg_goal_dist",
+    parser.add_argument("--env-id", type=str, default="delta_distx50",
         help="the id of the environment")
-    parser.add_argument("--task", type=str, default="JUGGLE_PUCK",
+    parser.add_argument("--task", type=str, default="GOAL_X",
             help="the task you wish to train")
     parser.add_argument("--total-timesteps", type=int, default=1_000_000,
         help="total timesteps of the experiments")
@@ -57,7 +58,8 @@ def parse_args():
         help="the learning rate of the optimizer")
     parser.add_argument("--num-envs", type=int, default=4,
         help="the number of parallel game environments")
-    parser.add_argument("--num-steps", type=int, default=10242, # Modified from 2048
+    # parser.add_argument("--num-steps", type=int, default=10242, # Modified from 2048
+    parser.add_argument("--num-steps", type=int, default=2048, # Modified from 2048
         help="the number of steps to run in each environment per policy rollout")
     parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="Toggle learning rate annealing for policy and value networks")
@@ -180,7 +182,7 @@ class Agent(nn.Module):
 
     def get_action_and_value(self, x, sigma, action=None):
         action_mean = self.actor_mean(x)
-        sigma = sigma * torch.ones(action_mean.shape)
+        sigma = sigma * torch.ones(action_mean.shape).to(action_mean.device)
         probs = Normal(action_mean, sigma)
         if action is None:
             action = probs.sample()
@@ -259,7 +261,6 @@ if __name__ == "__main__":
     num_eps = 0
     success_rate = 0
     best_rate = 0
-    next_save_step = 0  # Initialize the variable to track the last save step
     for update in range(1, num_updates + 1):
         
         # Annealing the rate if instructed to do so.
@@ -315,17 +316,13 @@ if __name__ == "__main__":
                 num_eps = 0
                 successes = 0
                 writer.add_scalar("charts/success_rate", success_rate, global_step)
-                print(f"success rate: {success_rate}")
+                if round(global_step, -3) % 5000 == 0:
+                    model_path = f"runs/{run_name}/{args.exp_name}-{global_step}.cleanrl_model"
+                    os.makedirs(os.path.dirname(model_path), exist_ok=True) 
+                    torch.save(agent.state_dict(), model_path)
+                    print(f"model saved to {model_path} with success rate: {success_rate}, num eps: {num_eps}")
 
-            if global_step > next_save_step:
-                model_path = f"runs/{run_name}/{args.exp_name}-{global_step}.cleanrl_model"
-                os.makedirs(os.path.dirname(model_path), exist_ok=True)
-                torch.save(agent.state_dict(), model_path)
-                print(f"model saved to {model_path} with success rate: {success_rate}, num eps: {num_eps}")
-                last_save_step = global_step
-                next_save_step += 5000
-            
-            
+                print(f"success rate: {success_rate}")
 
         # bootstrap value if not done
         with torch.no_grad():

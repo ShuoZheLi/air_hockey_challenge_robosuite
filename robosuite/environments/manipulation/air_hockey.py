@@ -156,7 +156,7 @@ class AirHockey(SingleArmEnv):
             render_visual_mesh=True,
             render_gpu_device_id=-1,
             control_freq=20,
-            horizon=1000,
+            horizon=400,
             ignore_done=False,
             hard_reset=True,
             camera_names="agentview",
@@ -207,6 +207,8 @@ class AirHockey(SingleArmEnv):
         assert task in ["TOUCHING_PUCK", "REACHING", "MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_X",
                         "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK", "POSITIVE_REGION"]
         self.task = task
+
+        self.prev_puck_goal_dist = None
 
         super().__init__(
             robots=robots,
@@ -320,7 +322,6 @@ class AirHockey(SingleArmEnv):
 
         if self.task == "GOAL_X":
             self.goal_x = 1.4
-            self.prev_puck_dist = None
 
         return obs
 
@@ -382,23 +383,33 @@ class AirHockey(SingleArmEnv):
         puck_vel = np.dot(self.table_transform, self.sim.data.get_body_xvelp("puck"))
         gripper_pos = np.dot(self.table_transform, self.sim.data.site_xpos[self.robots[0].eef_site_id])
         gripper_vel = self.sim.data.get_body_xvelp("gripper0_eef")
-        print(f"dist: {np.linalg.norm((gripper_pos - self.goal_region)[:2])}")
+        # print(f"dist: {np.linalg.norm((gripper_pos - self.goal_region)[:2])}")
         reward = 0
         if self.task == "TOUCHING_PUCK":
             reward = 10 if np.linalg.norm(puck_pos[:2] - gripper_pos[:2]) < 0.1 and gripper_vel[0] > 0.02 else 0
         elif self.task == "REACHING":
-            reward = self.success_reward if np.linalg.norm((gripper_pos - self.goal_region)[:2]) <= 0.05 else 0
+            reward = 20 if np.linalg.norm((gripper_pos - self.goal_region)[:2]) <= 0.05 else 0
         elif self.task == "MIN_UPWARD_VELOCITY":
             reward = 20 if puck_vel[0] > 2 else -1
         elif self.task == "GOAL_REGION":
             reward = 20 if np.linalg.norm((puck_pos - self.goal_region)[:2]) <= 0.05 else -np.linalg.norm((puck_pos - self.goal_region)[:2])
         elif self.task == "GOAL_X":
-            curr_dist = self.goal_x - puck_pos[0]
-            if self.prev_puck_dist is not None:
-                reward += -(curr_dist - self.prev_puck_dist)
-            self.prev_puck_dist = curr_dist
             if puck_pos[0] > self.goal_x:
-                reward = 100
+                reward = 10
+            else:
+                # reward = -abs(puck_pos[0] - self.goal_x) * 0.1
+                # print("reward: ", reward)
+            # else:
+                if self.prev_puck_goal_dist is not None:
+                    reward = (self.prev_puck_goal_dist - abs(puck_pos[0] - self.goal_x)) * 50
+                    # if reward > 0:
+                    #     reward = reward * 2
+                    # print("reward: ", reward)
+
+            self.prev_puck_goal_dist = abs(puck_pos[0] - self.goal_x)
+
+            # print("dist: ", abs(puck_pos[0] - self.goal_x))
+            # print("reward: ", reward)
         elif self.task == "GOAL_REGION_DESIRED_VELOCITY":
             condition = (np.linalg.norm(
                 (puck_pos - self.goal_region)[:2]) <= 0.05 and  # Checks if the puck is in the correct region
@@ -588,6 +599,13 @@ class AirHockey(SingleArmEnv):
             @sensor(modality=modality)
             def puck_pos(obs_cache):
                 return self.sim.data.get_body_xpos("puck")
+            
+            @sensor(modality=modality)
+            def puck_goal_dist(obs_cache):
+                if not hasattr(self, 'goal_x'):
+                    return np.array([np.linalg.norm(self.sim.data.get_body_xpos("puck")[0] - 0)])
+                else:
+                    return np.array([np.linalg.norm(self.sim.data.get_body_xpos("puck")[0] - self.goal_x)]) / 1.4
 
             @sensor(modality=modality)
             def puck_velo(obs_cache):
@@ -610,7 +628,12 @@ class AirHockey(SingleArmEnv):
             if self.task == "GOAL_REGION_DESIRED_VELOCITY":
                 sensors.append(goal_vel)
 
+            if self.task == "GOAL_X" or self.task == "GOAL_REGION":
+                sensors.append(puck_goal_dist)
+
             names = [s.__name__ for s in sensors]
+
+            # import pdb; pdb.set_trace()
 
             # Create observables
             for name, s in zip(names, sensors):
@@ -619,6 +642,7 @@ class AirHockey(SingleArmEnv):
                     sensor=s,
                     sampling_rate=self.control_freq,
                 )
+            # import pdb; pdb.set_trace()
 
         return observables
 
