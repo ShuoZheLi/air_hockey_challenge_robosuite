@@ -34,7 +34,8 @@
             <!-- <geom type="box" material="grey" condim="6" friction="10000 0.0 0.0" priority="1"
                   solref="-2000000 -250" solimp="0.99 0.999 0.001 0.5 2" group="1"/> -->
                 <geom type="box" material="grey" condim="6" friction="10000 0.0 0.0" priority="1"
-                solref="-200000 -250" solimp="0.99 0.999 0.001 0.5 2" group="1"/>
+                solref="-800000 -250" solimp="0.99 0.999 0.001 0.5 2" group="1"/>
+                <!-- solref="-200000 -250" solimp="0.99 0.999 0.001 0.5 2" group="1"/> -->
         </default>
     </default>
 

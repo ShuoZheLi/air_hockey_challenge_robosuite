@@ -47,12 +47,17 @@ def parse_args():
                         help="File path for the checkpoint file to load model from")
 
     # Algorithm specific arguments
-    # parser.add_argument("--env-id", type=str, default="neg_goal_dist",
-    parser.add_argument("--env-id", type=str, default="delta_distx50",
+    # parser.add_argument("--env-id", type=str, default="JUGGLE_PUCK_10",
+    # parser.add_argument("--env-id", type=str, default="neg_goal_dist_01",
+    # parser.add_argument("--env-id", type=str, default="delta_distx50",
+    # parser.add_argument("--env-id", type=str, default="hitting_puck_vel_004_500T",
+    # parser.add_argument("--env-id", type=str, default="hitting_over_X_with_juggle_01_neg_dist",
+    parser.add_argument("--env-id", type=str, default="reach_pos with_vel",
         help="the id of the environment")
-    parser.add_argument("--task", type=str, default="GOAL_X",
+    parser.add_argument("--task", type=str, default="REACHING",
             help="the task you wish to train")
-    parser.add_argument("--total-timesteps", type=int, default=1_000_000,
+    # parser.add_argument("--total-timesteps", type=int, default=1_000_000,
+    parser.add_argument("--total-timesteps", type=int, default=500_000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=3e-4,
         help="the learning rate of the optimizer")
@@ -131,11 +136,14 @@ def make_robosuite_env(idx, capture_video, run_name, gamma, task):
             use_camera_obs=False,
             control_freq=20
         )
-        env = GymWrapper(env, keys=['robot0_joint_pos_cos', 
-                        'robot0_joint_pos_sin', 
-                        'robot0_joint_vel',
+        env = GymWrapper(env, keys=[
+                        # 'robot0_joint_pos_cos', 
+                        # 'robot0_joint_pos_sin', 
+                        # 'robot0_joint_vel',
                         'robot0_eef_pos',
-                        'puck_pos'
+                        # 'puck_pos',
+                        # 'puck_goal_dist'
+                        'goal_pos',
                         ])
 
         if capture_video and idx == 0:
@@ -218,7 +226,7 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
-    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    device = torch.device("cuda:3" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
     # envs = gym.vector.SyncVectorEnv(

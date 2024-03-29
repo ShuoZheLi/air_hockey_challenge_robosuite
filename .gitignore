@@ -115,3 +115,8 @@ mjkey.txt
 
 # private macros
 macros_private.py
+
+
+*.cleanrl_model
+
+*events*
