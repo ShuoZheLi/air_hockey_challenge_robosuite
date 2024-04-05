@@ -37,4 +37,4 @@ for filename in files:
         totalSize += len(data)
         print(f'{Style.RESET_ALL}Dataset Size: {Fore.GREEN}{len(data):<10} {Style.RESET_ALL}Filename: {Fore.RED}{filename}{Style.RESET_ALL}') # fancy colors
 print("-------------------------------------------------")
-print(f'{Style.RESET_ALL}Total Size: {Fore.BLUE}{totalSize} {Style.RESET_ALL}(Desired Size: {Fore.YELLOW}{999 * 300}{Style.RESET_ALL})') # fancy colors
+print(f'{Style.RESET_ALL}Total Size: {Fore.BLUE}{totalSize} {Style.RESET_ALL}(Desired Size: {Fore.YELLOW}{1000 * 300}{Style.RESET_ALL})') # fancy colors

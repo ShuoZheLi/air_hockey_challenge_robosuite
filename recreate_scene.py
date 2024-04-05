@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import time
 
 import robosuite as suite
 from robosuite.wrappers import GymWrapper
@@ -45,7 +46,7 @@ env = GymWrapper(env, keys=['robot0_eef_pos',
                             'robot0_eef_quat',
                             ])
 
-data = np.load('./Datasets/dataset1.npy')
+data = np.load('./Datasets/dataset_46_1000_04042024203621.npy')
 env.reset()
 
 counter = 0
@@ -69,6 +70,10 @@ print (data.shape)
 # info["joint_pos"] = [self.sim.data.qpos[x] for x in self._ref_joint_pos_indexes]
 # info["joint_vel"] = [self.sim.data.qvel[x] for x in self._ref_joint_vel_indexes]
 
+startTime = time.time()
+currTime = (time.time() - startTime) * 1000
+lastTime = (time.time() - startTime) * 1000
+print(startTime)
 for i, d in enumerate(data):
     # action = np.array([d[0], d[1], 0.])
     action = np.zeros(6)
@@ -105,12 +110,17 @@ for i, d in enumerate(data):
     arm_vel = np.array([d[20], d[21], d[22], d[23], d[24], d[25]])
 
     robot_joints = env.robots[0].robot_model.joints
-    # print(robot_joints)
 
     for j, joint in enumerate(robot_joints):
         env.sim.data.set_joint_qpos(joint, arm_pos[j])
         env.sim.data.set_joint_qvel(joint, arm_vel[j])
 
+    lastTime = currTime # time from last frame in ms
+    currTime = (time.time() - startTime) * 1000 # time since start in ms
+    deltaTime = currTime - lastTime # time since last frame in ms
+    sleepTime = max(0, ((d[27] - deltaTime) / 1000))
+    if (sleepTime > 0 and i > 0):
+        time.sleep((d[27] - deltaTime) / 1000) # sleep for deltatime
     env.step(action)
-    print("executing: ", i)
+    print("executing frame: ", i)
     env.render()

@@ -123,8 +123,8 @@ if __name__ == '__main__':
     dataset = []
     try:
         startTime = time.time()
-        currTime = time.time()
-        lastTime = time.time()
+        currTime = (time.time() - startTime) * 1000
+        lastTime = (time.time() - startTime) * 1000
         print(startTime)
         while True:
             screen_image, _ = get_observation_data(obs)
