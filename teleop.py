@@ -1,3 +1,4 @@
+from datetime import datetime
 import time
 
 import pygame
@@ -121,6 +122,10 @@ if __name__ == '__main__':
             datasetCounter += 1
     dataset = []
     try:
+        startTime = time.time()
+        currTime = time.time()
+        lastTime = time.time()
+        print(startTime)
         while True:
             screen_image, _ = get_observation_data(obs)
             update_window(screen_image)
@@ -137,20 +142,31 @@ if __name__ == '__main__':
             action = np.append(action, np.zeros(3))
             # TODO Fix this hack
 
+            '''STORE THE TIME SINCE START AND DELTA TIME SINCE LAST FRAME'''
+            lastTime = currTime # time from last frame in ms
+            currTime = (time.time() - startTime) * 1000 # time since start in ms
+            deltaTime = currTime - lastTime # time since last frame in ms
+            # print("time since start: " + str(currTime) + " ms")
+            # print("delta time: " + str(deltaTime) + " ms")
+
             # print(obs[-3:], action[6:9])
             # action[6:9] -= obs[-3:]
             obs, reward, done, truncated, info = env.step(action[6:] if count > delay else action[6:] * 0)
-            dataset.append((world_coord[0], world_coord[1], *tuple(info["puck_pos"]), *tuple(info["puck_vel"]), *tuple(info["gripper_pos"]), *tuple(info["gripper_vel"]), *tuple(info["joint_pos"]), *tuple(info["joint_vel"]))) # what the camera thinks your mouse location is + puck position (x, y, z)
+            dataset.append((world_coord[0], world_coord[1], *tuple(info["puck_pos"]), *tuple(info["puck_vel"]), *tuple(info["gripper_pos"]), *tuple(info["gripper_vel"]), *tuple(info["joint_pos"]), *tuple(info["joint_vel"]), currTime, deltaTime)) # what the camera thinks your mouse location is + puck position (x, y, z)
             env.render()
+
+
             count += 1
             idx %= len(coordinates)
 
             if (done):
-                savePath = "./Datasets/dataset" + str(datasetCounter)
-                np.save(savePath, np.array(dataset))
-                print("Saved dataset" + str(datasetCounter))
+                timestamp = datetime.now().strftime("%m%d%Y%H%M%S")
+                savePath = f"./Datasets/dataset_{datasetCounter}_{len(dataset)}_{timestamp}"
+                if (len(dataset) > 50):
+                    np.save(savePath, np.array(dataset))
+                    print("Saved dataset" + str(datasetCounter))
+                    datasetCounter += 1
                 dataset = []
-                datasetCounter += 1
                 env = suite.make(
                         **config,
                         has_renderer=True,
@@ -174,5 +190,6 @@ if __name__ == '__main__':
         pass
 
     savePath = "./Datasets/dataset" + str(datasetCounter)
-    np.save(savePath, np.array(dataset))
-    print("Saved dataset" + str(datasetCounter))
+    if (len(dataset) > 50):
+        np.save(savePath, np.array(dataset))
+        print("Saved dataset" + str(datasetCounter))

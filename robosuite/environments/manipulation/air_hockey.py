@@ -287,17 +287,17 @@ class AirHockey(SingleArmEnv):
         # print(eef_angle)
 
         # gripper0_wiping_gripper position
-        gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
+        # gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
         puck_vel = self.sim.data.get_body_xvelp("puck")
-        print("----")
-        print(self.sim.data.get_body_xpos("gripper0_eef"))
+        # print("----")
+        # print(self.sim.data.get_body_xpos("gripper0_eef"))
         # print(self.sim.data.get_joint_qpos("robot0_shoulder_pan_joint"))
         # print(self.sim.data.get_joint_qpos("robot0_shoulder_lift_joint"))
         # print(self.sim.data.get_joint_qpos("robot0_elbow_joint"))
         # print(self.sim.data.get_joint_qpos("robot0_wrist_1_joint"))
         # print(self.sim.data.get_joint_qpos("robot0_wrist_2_joint"))
         # print(self.sim.data.get_joint_qpos("robot0_wrist_3_joint"))
-        print("----")
+        # print("----")
         # print(f"location: {}")
         # MAXIMIZE HITTING VELOCITY
         if puck_vel[0] > 0.05:
@@ -358,7 +358,7 @@ class AirHockey(SingleArmEnv):
         # allow for controller positions to point into the table to increase force
         self.z_offset = 0.
         self.x_offset = self.z_offset / np.tan(self.table_tilt)
-        print(self.x_offset)
+        # print(self.x_offset)
 
         self.transform_z = lambda x : self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
 
