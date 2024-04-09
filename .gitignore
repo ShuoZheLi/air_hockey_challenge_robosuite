@@ -116,5 +116,14 @@ mjkey.txt
 # private macros
 macros_private.py
 
+# weights and biases logging
 wandb/
+
+# Datasets folder
 Datasets/
+
+# Experiments folder
+runs/
+
+# Mujoco log
+MUJOCO_LOG.TXT
