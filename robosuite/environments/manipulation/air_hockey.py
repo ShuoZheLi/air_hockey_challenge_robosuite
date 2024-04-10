@@ -335,7 +335,7 @@ class AirHockey(SingleArmEnv):
         self._ref_joint_vel_indexes = [self.sim.model.get_joint_qvel_addr(x) for x in self.robot_joints]
         info["joint_pos"] = [self.sim.data.qpos[x] for x in self._ref_joint_pos_indexes]
         info["joint_vel"] = [self.sim.data.qvel[x] for x in self._ref_joint_vel_indexes]
-
+        info["validation_data"] = [self.sim.data.site_xpos[self.robots[0].eef_site_id], self.sim.data.get_body_xquat('gripper0_eef'), self.sim.data.get_body_xvelp('gripper0_eef'), self.sim.data.get_body_xvelr('gripper0_eef')]
         done, reward = self._check_terminated(done, reward, info)
         return reward, done, info
 
