@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import os
-
+import argparse
 from colorama import Fore, Style
 
 '''
@@ -42,14 +42,28 @@ def sort_key(filename):
     # Return a tuple of the dataset number and the timestamp
     return (dataset_number, timestamp)
 
-files = sorted(os.listdir('./Datasets'), key=sort_key)
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data-path", type=str, default=None, help="File path for the dataset to examine.")
+    args = parser.parse_args()
+    return args
 
 totalSize = 0
 
-for filename in files:
-    if filename.endswith('.npy'):
-        data = np.load(f'./Datasets/{filename}')
-        totalSize += len(data)
-        print(f'{Style.RESET_ALL}Dataset Size: {Fore.GREEN}{len(data):<10} {Style.RESET_ALL}Filename: {Fore.RED}{filename}{Style.RESET_ALL}') # fancy colors
-print("-------------------------------------------------")
-print(f'{Style.RESET_ALL}Total Current Size vs Desired: {Fore.BLUE}{format(totalSize, ",")}{Style.RESET_ALL} / {Fore.YELLOW}{format(1000 * 300, ",")}{Style.RESET_ALL}') # fancy colors
+if __name__ == '__main__':
+    
+    args = parse_args()
+
+    if args.data_path:
+        try:
+            data = np.load(args.data_path)
+            totalSize += len(data)
+            print(f'{Style.RESET_ALL}Dataset Size: {Fore.GREEN}{len(data):<10} {Style.RESET_ALL}Filename: {Fore.RED}{args.data_path}{Style.RESET_ALL}') # fancy colors
+            print("-------------------------------------------------")
+            print(f'{Style.RESET_ALL}Total Current Size vs Desired: {Fore.BLUE}{format(totalSize, ",")}{Style.RESET_ALL} / {Fore.YELLOW}{format(1000 * 300, ",")}{Style.RESET_ALL}') # fancy colors
+
+        except Exception as e:
+            print(f"Error occured while loading file: {e}.")
+    
+    else:
+        print("Provide a data path using the command line argument --data-path")
