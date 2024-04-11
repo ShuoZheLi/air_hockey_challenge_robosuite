@@ -44,26 +44,34 @@ def sort_key(filename):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-path", type=str, default=None, help="File path for the dataset to examine.")
+    parser.add_argument("--data-path", type=str, default=None, help="Directory path for datasets to examine.")
     args = parser.parse_args()
     return args
 
-totalSize = 0
-
 if __name__ == '__main__':
-    
+
     args = parse_args()
 
     if args.data_path:
         try:
-            data = np.load(args.data_path)
-            totalSize += len(data)
-            print(f'{Style.RESET_ALL}Dataset Size: {Fore.GREEN}{len(data):<10} {Style.RESET_ALL}Filename: {Fore.RED}{args.data_path}{Style.RESET_ALL}') # fancy colors
+            totalSize = 0
+            args.data_path = os.path.abspath(args.data_path)
+            # args.data_path = './Datasets'
+            # files = sorted(os.listdir(args.data_path), key=sort_key)
+            files = os.listdir(args.data_path)
+
+            for filename in files:
+                if (filename.endswith('.npy')):
+                    path = os.path.join(args.data_path, filename)
+                    data = np.load(path)
+                    totalSize += len(data)
+                    print(f'{Style.RESET_ALL}Dataset Size: {Fore.GREEN}{len(data):<10} {Style.RESET_ALL}Filename: {Fore.RED}{filename}{Style.RESET_ALL}')
+
             print("-------------------------------------------------")
             print(f'{Style.RESET_ALL}Total Current Size vs Desired: {Fore.BLUE}{format(totalSize, ",")}{Style.RESET_ALL} / {Fore.YELLOW}{format(1000 * 300, ",")}{Style.RESET_ALL}') # fancy colors
 
         except Exception as e:
             print(f"Error occured while loading file: {e}.")
-    
+
     else:
         print("Provide a data path using the command line argument --data-path")
