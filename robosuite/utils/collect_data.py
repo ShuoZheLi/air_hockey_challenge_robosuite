@@ -9,10 +9,24 @@ from torch import nn
 from torch.distributions.normal import Normal
 import os
 import pickle
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model-path", type=str, default=None, help="the path of the checkpoint to use")
+    parser.add_argument("--save-folder-path", type=str, default=None, help="the folder to save the .pkl file to")
+    parser.add_argument("--task", type=str, default=None, help="The task to perform: TOUCHING_PUCK, REACHING, MIN_UPWARD_VELOCITY, GOAL_REGION, GOAL_X, GOAL_REGION_DESIRED_VELOCITY, JUGGLE_PUCK, POSITIVE_REGION, HITTING")
+    parser.add_argument("--data-length", type=int, default=1_000_000, help="The length of the data to save, defaults to 1 million")
+    
+    return parser.parse_args()
+    
+
 
 if __name__ == '__main__':
+    
+    args = parse_args()
 
-    SAVED_DATA = {
+    saved_data = {
         "observations": [],
         "actions": [],
         "next_observations": [],
@@ -21,11 +35,12 @@ if __name__ == '__main__':
         "terminates": [],
         "infos": []
     }
+    
+    data_length = 1_000_000
+    task = args.task
 
-    DATA_LENGTH = 1_000_000
-    task = "JUGGLE_PUCK"
-    save_path = f"data/{task}.pkl"
-    model_path = "runs/AirHockeyHIT__Juggling1__1__2024-03-23_21-16-48/Juggling1.cleanrl_model"
+    save_path = f"{args.save_folder}/{task}.pkl"
+    model_path = args.model_path
     
     assert task in ["MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK",
                         "POSITIVE_REGION"]
@@ -64,7 +79,7 @@ if __name__ == '__main__':
     # Load the pytorch model stored at a file path and then visualize its performance using the renderer
     checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
     elapsed_steps = 0
-    while elapsed_steps < DATA_LENGTH:
+    while elapsed_steps < data_length:
         env = thunk()
         # Set the camera
         env.viewer.set_camera(camera_id=0)
@@ -87,8 +102,8 @@ if __name__ == '__main__':
             obs = obs[None, :]
 
             action, _, _, _ = agent.get_action_and_value(torch.Tensor(obs))
-            SAVED_DATA['observations'].append(obs)
-            SAVED_DATA['actions'].append(action)
+            saved_data['observations'].append(obs)
+            saved_data['actions'].append(action)
             
             # in our env, done determines end, there is no truncated (it just returns False in the wrapper)
             obs, reward, done, _, info = env.step(action.numpy().squeeze())  # play action
@@ -99,11 +114,11 @@ if __name__ == '__main__':
             elif done:
                 terminated = True
 
-            SAVED_DATA['next_observations'].append(obs)
-            SAVED_DATA['rewards'].append(reward)
-            SAVED_DATA['terminals'].append(done)
-            SAVED_DATA['terminates'].append(terminated)
-            SAVED_DATA['infos'].append(info)
+            saved_data['next_observations'].append(obs)
+            saved_data['rewards'].append(reward)
+            saved_data['terminals'].append(done)
+            saved_data['terminates'].append(terminated)
+            saved_data['infos'].append(info)
             ret += reward
             elapsed_steps += 1
 
@@ -113,8 +128,8 @@ if __name__ == '__main__':
 
     os.makedirs(save_path, exist_ok=True)
     with open(save_path, 'wb') as file:
-        for key in SAVED_DATA.keys():
-            SAVED_DATA[key] = np.array(SAVED_DATA[key])
-        pickle.dump(SAVED_DATA, file)
+        for key in saved_data.keys():
+            saved_data[key] = np.array(saved_data[key])
+        pickle.dump(saved_data, file)
     
     print(f"Data has been saved to {save_path}")
