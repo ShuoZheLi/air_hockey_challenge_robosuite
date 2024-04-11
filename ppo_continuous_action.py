@@ -137,13 +137,13 @@ def make_robosuite_env(idx, capture_video, run_name, gamma, task):
             control_freq=20
         )
         env = GymWrapper(env, keys=[
-                        # 'robot0_joint_pos_cos', 
-                        # 'robot0_joint_pos_sin', 
-                        # 'robot0_joint_vel',
-                        'robot0_eef_pos',
-                        # 'puck_pos',
-                        # 'puck_goal_dist'
-                        'goal_pos',
+                            'robot0_joint_pos_cos', 
+                            'robot0_joint_pos_sin', 
+                            'robot0_joint_vel',
+                            'robot0_eef_pos',
+                            'puck_pos',
+                            'puck_goal_dist'
+                            'goal_pos',
                         ])
 
         if capture_video and idx == 0:
@@ -151,8 +151,6 @@ def make_robosuite_env(idx, capture_video, run_name, gamma, task):
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
-        # env = gym.wrappers.NormalizeObservation(env)
-        # env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         env = gym.wrappers.NormalizeReward(env, gamma=gamma)
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
         return env
@@ -278,7 +276,7 @@ if __name__ == "__main__":
             optimizer.param_groups[0]["lr"] = lrnow
         
         for step in range(0, args.num_steps):
-            
+            # Annealing the action noise (standard deviation of the action distribution)
             sigma = -global_step/(args.total_timesteps) + 1.0001
             
             sigma = torch.as_tensor([sigma], device=device, dtype=torch.float32)
