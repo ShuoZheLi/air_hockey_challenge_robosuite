@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import numpy as np
 import math
 from robosuite.environments.manipulation.single_arm_env import SingleArmEnv

@@ -12,6 +12,8 @@ CONTROLLER_INFO = {
     "JOINT_POSITION": "Joint Position",
     "OSC_POSITION": "Operational Space Control (Position Only)",
     "OSC_POSE": "Operational Space Control (Position + Orientation)",
+    "AIR_HOCKEY_OSC_POSE": "Customized Operational Space Control (keeps eef on table) (Position + Orientation)",
+    "AIR_HOCKEY_OSC_POSITION": "Customized Operational Space Control (keeps eef on table) (Position + Orientation)",
     "IK_POSE": "Inverse Kinematics Control (Position + Orientation) (Note: must have PyBullet installed)",
 }
 
