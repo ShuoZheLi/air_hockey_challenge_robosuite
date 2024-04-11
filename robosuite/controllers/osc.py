@@ -1,4 +1,3 @@
-import json
 import math
 
 import numpy as np
@@ -6,11 +5,9 @@ import numpy as np
 import robosuite.utils.transform_utils as T
 from robosuite.controllers.base_controller import Controller
 from robosuite.utils.control_utils import *
-from robosuite.controllers.interpolators.linear_interpolator import LinearInterpolator
 
 # Supported impedance modes
 IMPEDANCE_MODES = {"fixed", "variable", "variable_kp"}
-
 
 # TODO: Maybe better naming scheme to differentiate between input / output min / max and pos/ori limits, etc.
 
@@ -109,32 +106,29 @@ class OperationalSpaceController(Controller):
     """
 
     def __init__(
-            self,
-            sim,
-            eef_name,
-            joint_indexes,
-            actuator_range,
-            input_max=1,
-            input_min=-1,
-            # output_max=(0.05, 0.05, 0.05, 0.5, 0.5, 0.5),
-            # output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
-            output_max=0.5,
-            output_min=-0.5,
-            kp=150,
-            damping_ratio=1,
-            impedance_mode="variable_kp",
-            kp_limits=(0, 300),
-            damping_ratio_limits=(0, 100),
-            policy_freq=20,
-            position_limits=None,
-            orientation_limits=None,
-            interpolator_pos=None,
-            interpolator_ori=None,
-            control_ori=True,
-            control_delta=True,
-            uncouple_pos_ori=False,
-            logger=None,
-            **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
+        self,
+        sim,
+        eef_name,
+        joint_indexes,
+        actuator_range,
+        input_max=1,
+        input_min=-1,
+        output_max=(0.05, 0.05, 0.05, 0.5, 0.5, 0.5),
+        output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
+        kp=150,
+        damping_ratio=1,
+        impedance_mode="fixed",
+        kp_limits=(0, 300),
+        damping_ratio_limits=(0, 100),
+        policy_freq=20,
+        position_limits=None,
+        orientation_limits=None,
+        interpolator_pos=None,
+        interpolator_ori=None,
+        control_ori=True,
+        control_delta=True,
+        uncouple_pos_ori=True,
+        **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
     ):
 
         super().__init__(
@@ -143,22 +137,6 @@ class OperationalSpaceController(Controller):
             joint_indexes,
             actuator_range,
         )
-
-        self.prev_normal = None
-        if logger:
-            self.logger = logger
-
-        self.table_tilt = 0.09
-        self.table_elevation = 1
-        self.table_x_start = 0.8
-
-        # allow for controller positions to point into the table to increase force
-        self.z_offset = 0.008
-        self.x_offset = self.z_offset / np.tan(self.table_tilt)
-        print(self.x_offset)
-
-        self.transform_z = lambda x: self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
-
         # Determine whether this is pos ori or just pos
         self.use_ori = control_ori
 
@@ -177,9 +155,7 @@ class OperationalSpaceController(Controller):
 
         # kp kd
         self.kp = self.nums2array(kp, 6)
-        # self.kp[3:6] = 300
         self.kd = 2 * np.sqrt(self.kp) * damping_ratio
-        # self.kd = damping_ratio
 
         # kp and kd limits
         self.kp_min = self.nums2array(kp_limits[0], 6)
@@ -203,14 +179,13 @@ class OperationalSpaceController(Controller):
             self.control_dim += 6
 
         # limits
-        # self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
-        self.position_limits = np.array([[-0.1, -0.4, -10], [0.26, 0.4, 0]])
+        self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
         self.orientation_limits = np.array(orientation_limits) if orientation_limits is not None else orientation_limits
 
         # control frequency
         self.control_freq = policy_freq
 
-        # interpolator150
+        # interpolator
         self.interpolator_pos = interpolator_pos
         self.interpolator_ori = interpolator_ori
 
@@ -218,13 +193,11 @@ class OperationalSpaceController(Controller):
         self.uncoupling = uncouple_pos_ori
 
         # initialize goals based on initial pos / ori
+        self.goal_ori = np.array(self.initial_ee_ori_mat)
         self.goal_pos = np.array(self.initial_ee_pos)
 
         self.relative_ori = np.zeros(3)
         self.ori_ref = None
-
-        self.fixed_ori = trans.euler2mat(np.array([0, math.pi - 0.09, 0]))
-        self.goal_ori = np.array(self.fixed_ori)
 
     def set_goal(self, action, set_pos=None, set_ori=None):
         """
@@ -292,13 +265,6 @@ class OperationalSpaceController(Controller):
             scaled_delta[:3], self.ee_pos, position_limit=self.position_limits, set_pos=set_pos
         )
 
-        self.goal_ori = self.fixed_ori
-        # self.goal_pos[2] = np.tan(0.26) * self.goal_pos[0] + 0.985
-        self.goal_pos[2] = self.transform_z(self.goal_pos[0])
-        # self.goal_pos += 0.03 * np.array([np.sin(self.table_tilt), 0, np.cos(self.table_tilt)])
-        # self.position_limits[0][2] = self.transform_z(self.goal_pos[0])
-        # self.position_limits[1][2] = self.transform_z(self.goal_pos[0])
-
         if self.interpolator_pos is not None:
             self.interpolator_pos.set_goal(self.goal_pos)
 
@@ -308,11 +274,6 @@ class OperationalSpaceController(Controller):
                 orientation_error(self.goal_ori, self.ori_ref)
             )  # goal is the total orientation error
             self.relative_ori = np.zeros(3)  # relative orientation always starts at 0
-
-        # self.goal_ori = self.fixed_ori
-        # print("self.goal_pos", self.goal_pos)
-        # self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.985
-        # self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.95
 
     def run_controller(self):
         """
@@ -329,8 +290,6 @@ class OperationalSpaceController(Controller):
         # Update state
         self.update()
 
-        msg = dict()
-
         desired_pos = None
         # Only linear interpolator is currently supported
         if self.interpolator_pos is not None:
@@ -343,11 +302,6 @@ class OperationalSpaceController(Controller):
         else:
             desired_pos = np.array(self.goal_pos)
 
-        desired_pos[2] = self.transform_z(desired_pos[0]) + 0.02
-        # desired_pos[0] += self.x_offset
-        # desired_pos[2] = 0.2685 * desired_pos[0] + 0.95
-        # desired_pos = np.clip(desired_pos, self.position_limits[0], self.position_limits[1])
-
         if self.interpolator_ori is not None:
             # relative orientation based on difference between current ori and ref
             self.relative_ori = orientation_error(self.ee_ori_mat, self.ori_ref)
@@ -359,86 +313,19 @@ class OperationalSpaceController(Controller):
 
         # Compute desired force and torque based on errors
         position_error = desired_pos - self.ee_pos
-        # print(self.goal_pos, desired_pos, self.ee_pos, np.linalg.norm(position_error))
         vel_pos_error = -self.ee_pos_vel
 
-        # self.kp[2] = 200
-        # error_x = np.array([np.cos(self.table_tilt), 0, np.sin(self.table_tilt)])
-        # error_x = np.dot(error_x, position_error)
-        #
-        # error_vel_x = np.array([np.cos(self.table_tilt), 0, np.sin(self.table_tilt)])
-        # error_vel_x = np.dot(error_vel_x, vel_pos_error)
-        #
-        # desired_force = error_x * self.kp[0] * np.array([np.cos(self.table_tilt), 0, np.sin(self.table_tilt)])
-        # desired_force += position_error[1] * self.kp[1] * np.array([0, 1, 0])
-        #
-        # desired_force += error_vel_x * self.kd[0] * np.array([np.cos(self.table_tilt), 0, np.sin(self.table_tilt)])
-        # desired_force += vel_pos_error[1] * self.kd[1] * np.array([0, 1, 0])
-        #
-        # desired_force += self.kp[2] * np.array([np.sin(self.table_tilt), 0, -np.cos(self.table_tilt)])
-        # desired_force += (self.kp[2] * np.array([np.sin(self.table_tilt), 0, -np.cos(self.table_tilt)]) *
-        #                   (5 - np.linalg.norm(self.sim.data.sensordata[:3])))
-        # desired_force[2] = -20
         # F_r = kp * pos_err + kd * vel_err
-        # desired_force = np.multiply(np.array(position_error), np.array(self.kp[0:3])) + np.multiply(
-        #     vel_pos_error, self.kd[0:3]
-        # )
+        desired_force = np.multiply(np.array(position_error), np.array(self.kp[0:3])) + np.multiply(
+            vel_pos_error, self.kd[0:3]
+        )
 
         vel_ori_error = -self.ee_ori_vel
-        # print(desired_pos, self.ee_pos, desired_force)
-
-        position_error_in_base = T.make_pose(position_error, np.eye(3))
-
-        table_in_base = T.make_pose(np.array([0, 0, 0]), trans.euler2mat(np.array([0, -self.table_tilt, 0])))
-        base_in_table = T.pose_inv(table_in_base)
-
-        position_error_in_table = T.pose_in_A_to_pose_in_B(position_error_in_base, base_in_table)
-        velocity_error_in_table, _ = T.vel_in_A_to_vel_in_B(vel_pos_error, vel_ori_error, base_in_table)
-
-        msg["desired_pos"] = T.pose_in_A_to_pose_in_B(T.make_pose(desired_pos, np.eye(3)), base_in_table)[:3, 3].tolist()
-        msg["actual_pos"] = T.pose_in_A_to_pose_in_B(T.make_pose(self.ee_pos, np.eye(3)), base_in_table)[:3, 3].tolist()
-
-        msg["position_error"] = position_error_in_table[:3, 3].tolist()
-        msg["velocity_error"] = velocity_error_in_table.tolist()
-
-        msg["desired_ori"] = np.rad2deg(T.mat2euler(self.goal_ori, 'rxyz')).tolist()
-        msg["actual_ori"] = np.rad2deg(T.mat2euler(self.ee_ori_mat, 'rxyz')).tolist()
-
-        msg["ori_error"] = ori_error.tolist()
-        msg["vel_ori_error"] = vel_ori_error.tolist()
-
-        # position_error_in_table[2] = 0
-        # velocity_error_in_table[2] = 0
-
-        desired_force = np.dot(np.dot(base_in_table[:3, :3], np.eye(3)), position_error_in_table[:3, 3]) * self.kp[:3]
-        desired_force += np.dot(np.dot(base_in_table[:3, :3], np.eye(3)), velocity_error_in_table) * self.kd[:3]
 
         # Tau_r = kp * ori_err + kd * vel_err
         desired_torque = np.multiply(np.array(ori_error), np.array(self.kp[3:6])) + np.multiply(
             vel_ori_error, self.kd[3:6]
         )
-
-        # normal_force = np.linalg.norm(
-        #     np.dot(np.dot(base_in_table[:3, :3], np.array([0, 0, 1])), self.sim.data.sensordata[:3]))
-        # comp = -1
-        # if self.prev_normal:
-        #     d_normal = -normal_force + self.prev_normal
-        #     comp += 0 * -d_normal
-        # self.prev_normal = normal_force
-        #
-        # msg["normal_force"] = normal_force
-        #
-        # comp += -2 * (2 - np.clip(normal_force, -2, 2))
-        # desired_force += 0.05 * np.dot(base_in_table[:3, :3], np.array([0, 0, 1])) * comp
-        #
-        # print(self.sim.data.sensordata[:3], normal_force, (2 - np.clip(normal_force, -2, 2)), desired_force)
-
-        # desired_force += -2 * np.dot(base_in_table[:3, :3], np.array([0, 0, 1]))
-        msg["desired_force"] = desired_force.tolist()
-        msg["desired_torque"] = desired_torque.tolist()
-        msg["desired_force_in_table"] = np.dot(base_in_table[:3, :3].T, desired_force).tolist()
-
-        # self.logger.send_message(msg)
 
         # Compute nullspace matrix (I - Jbar * J) and lambda matrices ((J * M^-1 * J^T)^-1)
         lambda_full, lambda_pos, lambda_ori, nullspace_matrix = opspace_matrices(
@@ -456,6 +343,7 @@ class OperationalSpaceController(Controller):
 
         # Gamma (without null torques) = J^T * F + gravity compensations
         self.torques = np.dot(self.J_full.T, decoupled_wrench) + self.torque_compensation
+
         # Calculate and add nullspace torques (nullspace_matrix^T * Gamma_null) to final torques
         # Note: Gamma_null = desired nullspace pose torques, assumed to be positional joint control relative
         #                     to the initial joint positions
@@ -480,11 +368,7 @@ class OperationalSpaceController(Controller):
         Resets the goal to the current state of the robot
         """
         self.goal_ori = np.array(self.ee_ori_mat)
-
-        self.goal_ori = self.fixed_ori
         self.goal_pos = np.array(self.ee_pos)
-
-        self.goal_pos[2] = self.transform_z(self.goal_pos[0])
 
         # Also reset interpolators if required
 

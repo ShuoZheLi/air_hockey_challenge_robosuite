@@ -12,6 +12,7 @@ from .joint_pos import JointPositionController
 from .joint_tor import JointTorqueController
 from .joint_vel import JointVelocityController
 from .osc import OperationalSpaceController
+from .air_hockey_osc import AirHockeyOperationalSpaceController
 
 # Global var for linking pybullet server to multiple ik controller instances if necessary
 pybullet_server = None
@@ -126,13 +127,13 @@ def controller_factory(name, params):
             ori_interpolator = deepcopy(interpolator)
             ori_interpolator.set_states(ori="euler")
         params["control_ori"] = True
-        return OperationalSpaceController(interpolator_pos=interpolator, interpolator_ori=ori_interpolator, **params)
+        return AirHockeyOperationalSpaceController(interpolator_pos=interpolator, interpolator_ori=ori_interpolator, **params)
 
     if name == "OSC_POSITION":
         if interpolator is not None:
             interpolator.set_states(dim=3)  # EE control uses dim 3 for pos
         params["control_ori"] = False
-        return OperationalSpaceController(interpolator_pos=interpolator, **params)
+        return AirHockeyOperationalSpaceController(interpolator_pos=interpolator, **params)
 
     if name == "IK_POSE":
         ori_interpolator = None

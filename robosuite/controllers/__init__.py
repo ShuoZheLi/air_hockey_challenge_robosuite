@@ -1,4 +1,5 @@
 from .controller_factory import controller_factory, load_controller_config, reset_controllers, get_pybullet_server
+from .air_hockey_osc import AirHockeyOperationalSpaceController
 from .osc import OperationalSpaceController
 from .joint_pos import JointPositionController
 from .joint_vel import JointVelocityController
