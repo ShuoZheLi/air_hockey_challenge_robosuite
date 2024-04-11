@@ -110,8 +110,6 @@ class AirHockeyOperationalSpaceController(Controller):
             actuator_range,
             input_max=1,
             input_min=-1,
-            # output_max=(0.05, 0.05, 0.05, 0.5, 0.5, 0.5),
-            # output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
             output_max=0.5,
             output_min=-0.5,
             kp=150,
@@ -128,6 +126,7 @@ class AirHockeyOperationalSpaceController(Controller):
             control_delta=True,
             uncouple_pos_ori=False,
             logger=None,
+            table_tilt=0.09,
             **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
     ):
 
@@ -520,4 +519,4 @@ class AirHockeyOperationalSpaceController(Controller):
 
     @property
     def name(self):
-        return "OSC_" + self.name_suffix
+        return "AIR_HOCKEY_OSC_" + self.name_suffix
