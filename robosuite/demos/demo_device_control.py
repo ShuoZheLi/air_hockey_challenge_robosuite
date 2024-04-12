@@ -137,7 +137,6 @@ if __name__ == "__main__":
         "env_name": args.environment,
         "robots": args.robots,
         "controller_configs": controller_config,
-        "gripper_types": "Robotiq85Gripper",
     }
 
     # Check if we're using a multi-armed environment and use env_configuration argument if so
@@ -151,7 +150,7 @@ if __name__ == "__main__":
         **config,
         has_renderer=True,
         has_offscreen_renderer=False,
-        render_camera="sideview",
+        render_camera="agentview",
         ignore_done=True,
         use_camera_obs=False,
         reward_shaping=True,
@@ -177,8 +176,6 @@ if __name__ == "__main__":
         device = SpaceMouse(pos_sensitivity=args.pos_sensitivity, rot_sensitivity=args.rot_sensitivity)
     else:
         raise Exception("Invalid device choice: choose either 'keyboard' or 'spacemouse'.")
-    
-    print("env robot gripper: ", env.robots[0].gripper_type)
 
     while True:
         # Reset the environment
