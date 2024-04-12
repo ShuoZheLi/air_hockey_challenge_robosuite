@@ -303,11 +303,8 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
         )
 
         self.goal_ori = self.fixed_ori
-        # self.goal_pos[2] = np.tan(0.26) * self.goal_pos[0] + 0.985
+
         self.goal_pos[2] = self.transform_z(self.goal_pos[0])
-        # self.goal_pos += 0.03 * np.array([np.sin(self.table_tilt), 0, np.cos(self.table_tilt)])
-        # self.position_limits[0][2] = self.transform_z(self.goal_pos[0])
-        # self.position_limits[1][2] = self.transform_z(self.goal_pos[0])
 
         if self.interpolator_pos is not None:
             self.interpolator_pos.set_goal(self.goal_pos)
@@ -318,11 +315,6 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
                 orientation_error(self.goal_ori, self.ori_ref)
             )  # goal is the total orientation error
             self.relative_ori = np.zeros(3)  # relative orientation always starts at 0
-
-        # self.goal_ori = self.fixed_ori
-        # print("self.goal_pos", self.goal_pos)
-        # self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.985
-        # self.goal_pos[2] = 0.2685 * self.goal_pos[0] + 0.95
 
     def run_controller(self):
         """
@@ -354,9 +346,6 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             desired_pos = np.array(self.goal_pos)
 
         desired_pos[2] = self.transform_z(desired_pos[0]) + 0.02
-        # desired_pos[0] += self.x_offset
-        # desired_pos[2] = 0.2685 * desired_pos[0] + 0.95
-        # desired_pos = np.clip(desired_pos, self.position_limits[0], self.position_limits[1])
 
         if self.interpolator_ori is not None:
             # relative orientation based on difference between current ori and ref
@@ -367,35 +356,9 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             desired_ori = np.array(self.goal_ori)
             ori_error = orientation_error(desired_ori, self.ee_ori_mat)
 
-        # Compute desired force and torque based on errors
         position_error = desired_pos - self.ee_pos
-        # print(self.goal_pos, desired_pos, self.ee_pos, np.linalg.norm(position_error))
         vel_pos_error = -self.ee_pos_vel
-
-        # self.kp[2] = 200
-        # error_x = np.array([np.cos(self.table_tilt), 0, np.sin(self.table_tilt)])
-        # error_x = np.dot(error_x, position_error)
-        #
-        # error_vel_x = np.array([np.cos(self.table_tilt), 0, np.sin(self.table_tilt)])
-        # error_vel_x = np.dot(error_vel_x, vel_pos_error)
-        #
-        # desired_force = error_x * self.kp[0] * np.array([np.cos(self.table_tilt), 0, np.sin(self.table_tilt)])
-        # desired_force += position_error[1] * self.kp[1] * np.array([0, 1, 0])
-        #
-        # desired_force += error_vel_x * self.kd[0] * np.array([np.cos(self.table_tilt), 0, np.sin(self.table_tilt)])
-        # desired_force += vel_pos_error[1] * self.kd[1] * np.array([0, 1, 0])
-        #
-        # desired_force += self.kp[2] * np.array([np.sin(self.table_tilt), 0, -np.cos(self.table_tilt)])
-        # desired_force += (self.kp[2] * np.array([np.sin(self.table_tilt), 0, -np.cos(self.table_tilt)]) *
-        #                   (5 - np.linalg.norm(self.sim.data.sensordata[:3])))
-        # desired_force[2] = -20
-        # F_r = kp * pos_err + kd * vel_err
-        # desired_force = np.multiply(np.array(position_error), np.array(self.kp[0:3])) + np.multiply(
-        #     vel_pos_error, self.kd[0:3]
-        # )
-
         vel_ori_error = -self.ee_ori_vel
-        # print(desired_pos, self.ee_pos, desired_force)
 
         position_error_in_base = T.make_pose(position_error, np.eye(3))
 
@@ -417,38 +380,19 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
         msg["ori_error"] = ori_error.tolist()
         msg["vel_ori_error"] = vel_ori_error.tolist()
 
-        # position_error_in_table[2] = 0
-        # velocity_error_in_table[2] = 0
-
         desired_force = np.dot(np.dot(base_in_table[:3, :3], np.eye(3)), position_error_in_table[:3, 3]) * self.kp[:3]
         desired_force += np.dot(np.dot(base_in_table[:3, :3], np.eye(3)), velocity_error_in_table) * self.kd[:3]
 
-        # Tau_r = kp * ori_err + kd * vel_err
         desired_torque = np.multiply(np.array(ori_error), np.array(self.kp[3:6])) + np.multiply(
             vel_ori_error, self.kd[3:6]
         )
 
-        # normal_force = np.linalg.norm(
-        #     np.dot(np.dot(base_in_table[:3, :3], np.array([0, 0, 1])), self.sim.data.sensordata[:3]))
-        # comp = -1
-        # if self.prev_normal:
-        #     d_normal = -normal_force + self.prev_normal
-        #     comp += 0 * -d_normal
-        # self.prev_normal = normal_force
-        #
-        # msg["normal_force"] = normal_force
-        #
-        # comp += -2 * (2 - np.clip(normal_force, -2, 2))
-        # desired_force += 0.05 * np.dot(base_in_table[:3, :3], np.array([0, 0, 1])) * comp
-        #
-        # print(self.sim.data.sensordata[:3], normal_force, (2 - np.clip(normal_force, -2, 2)), desired_force)
-
-        # desired_force += -2 * np.dot(base_in_table[:3, :3], np.array([0, 0, 1]))
         msg["desired_force"] = desired_force.tolist()
         msg["desired_torque"] = desired_torque.tolist()
         msg["desired_force_in_table"] = np.dot(base_in_table[:3, :3].T, desired_force).tolist()
 
-        # self.logger.send_message(msg)
+        if self.logger is not None:
+            self.logger.send_message(msg)
 
         # Compute nullspace matrix (I - Jbar * J) and lambda matrices ((J * M^-1 * J^T)^-1)
         lambda_full, lambda_pos, lambda_ori, nullspace_matrix = opspace_matrices(
