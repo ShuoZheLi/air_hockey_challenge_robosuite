@@ -5,15 +5,15 @@ import numpy as np
 import robosuite.utils.transform_utils as T
 from robosuite.controllers.base_controller import Controller
 from robosuite.utils.control_utils import *
+from robosuite.controllers.osc import OperationalSpaceController
 
 # Supported impedance modes
 IMPEDANCE_MODES = {"fixed", "variable", "variable_kp"}
 
-class AirHockeyOperationalSpaceController(Controller):
+class AirHockeyOperationalSpaceController(OperationalSpaceController):
     """
-    Controller for controlling robot arm via operational space control. Allows position and / or orientation control
-    of the robot's end effector. For detailed information as to the mathematical foundation for this controller, please
-    reference http://khatib.stanford.edu/publications/pdfs/Khatib_1987_RA.pdf
+    Modified version of the Operational Space controller to control the air hockey robot and keep the end effector on
+    a table incline. See OSC.py for more details on Operational Space Control.
 
     NOTE: Control input actions can either be taken to be relative to the current position / orientation of the
     end effector or absolute values. In either case, a given action to this controller is assumed to be of the form:
@@ -95,6 +95,16 @@ class AirHockeyOperationalSpaceController(Controller):
 
         uncouple_pos_ori (bool): Whether to decouple torques meant to control pos and torques meant to control ori
 
+        logger (foxglove logger): Whether to use foxglove's logger to record required controller values
+
+        table_tilt (int): The incline angle of the table that the setup has
+
+        table_elevation: The z location of the table relative to the ground
+
+        x_start: The x value of the start of the table closest to the robot
+
+        z_offset: How far below the table we want the end effector to attempt pushing into (used to increase force on table)
+
         **kwargs: Does nothing; placeholder to "sink" any additional arguments so that instantiating this controller
             via an argument dict that has additional extraneous arguments won't raise an error
 
@@ -127,6 +137,9 @@ class AirHockeyOperationalSpaceController(Controller):
             uncouple_pos_ori=False,
             logger=None,
             table_tilt=0.09,
+            table_elevation=1,
+            table_x_start=0.8,
+            z_offset=0.08,
             **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
     ):
 
@@ -141,16 +154,13 @@ class AirHockeyOperationalSpaceController(Controller):
         if logger:
             self.logger = logger
 
-        self.table_tilt = 0.09
-        self.table_elevation = 1
-        self.table_x_start = 0.8
+        self.table_tilt = table_tilt
+        self.table_elevation = table_elevation
+        self.table_x_start = table_x_start
 
-        # allow for controller positions to point into the table to increase force
-        self.z_offset = 0.008
+        # calculate x_offset to push controller into table orthogonal to table tilt
+        self.z_offset = z_offset
         self.x_offset = self.z_offset / np.tan(self.table_tilt)
-        print(self.x_offset)
-
-        self.transform_z = lambda x: self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
 
         # Determine whether this is pos ori or just pos
         self.use_ori = control_ori
@@ -218,6 +228,13 @@ class AirHockeyOperationalSpaceController(Controller):
 
         self.fixed_ori = trans.euler2mat(np.array([0, math.pi - 0.09, 0]))
         self.goal_ori = np.array(self.fixed_ori)
+
+
+    def transform_z(self, x):
+        '''
+        Calculates the correct z value for the Air Hockey table given the x location
+        '''
+        return self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
 
     def set_goal(self, action, set_pos=None, set_ori=None):
         """
