@@ -57,7 +57,7 @@ class AirHockey(SingleArmEnv):
 
         use_camera_obs (bool): if True, every observation includes rendered image(s)
 
-        use_object_obs (bool): if True, include object (cube) information in
+        use_object_obs (bool): if True, include object (puck) information in
             the observation.
 
         reward_scale (None or float): Scales the normalized reward function by the amount specified.
@@ -183,7 +183,6 @@ class AirHockey(SingleArmEnv):
         # object placement initializer
         self.placement_initializer = placement_initializer
 
-        # gripper_types = "WipingGripper"
         gripper_types = "RoundGripper"
 
         self.arm_limit_collision_penalty = -10
@@ -245,29 +244,6 @@ class AirHockey(SingleArmEnv):
         if task == "POSITIVE_REGION":
             self.randomize_positive_regions()
 
-    # function bank
-    # towards robot negative
-    # print("puck_x pos:", self.sim.data.get_joint_qpos("puck_x"))
-    # -left, +right
-    # print("puck_y pos:", self.sim.data.get_joint_qpos("puck_y"))
-    # print("puck_yaw pos:", self.sim.data.get_joint_qpos("puck_yaw"))
-
-    # set puck position in sim
-    # self.sim.data.set_joint_qpos("puck_x", 0)
-    # self.sim.data.set_joint_qpos("puck_y", 0)
-    # self.sim.data.set_joint_qpos("puck_yaw", 0)
-    # self.sim.data.set_body_xpos("puck", [0.996, -0.300, 0.998])
-    # self.sim.forward()
-
-    # print(self.sim.data.model._body_name2id.keys())
-    # self.modder = DynamicsModder(sim=self.sim)
-    # self.modder.mod_position("puck", [1, -0.3, 1])
-    # self.modder.mod_position("puck_main", [1, -0.3, 1])
-    # self.modder.update()  
-
-    # gripper position
-    # print(self.sim.data.site_xpos[self.robots[0].eef_site_id])
-
     def randomize_goal_location(self, reaching=False):
         site = self.sim.model.site_name2id("goal_region")
 
@@ -325,22 +301,9 @@ class AirHockey(SingleArmEnv):
 
     def reward(self, action=None):
         """
-        Reward function for the task.
+        Reward function for the tasks.
 
-        Sparse un-normalized reward:
-
-            - a discrete reward of 2.25 is provided if the cube is lifted
-
-        Un-normalized summed components if using reward shaping:
-
-            - Reaching: in [0, 1], to encourage the arm to reach the cube
-            - Grasping: in {0, 0.25}, non-zero if arm is grasping the cube
-            - Lifting: in {0, 1}, non-zero if arm has lifted the cube
-
-        The sparse reward only consists of the lifting component.
-
-        Note that the final reward is normalized and scaled by
-        reward_scale / 2.25 as well so that the max score is equal to reward_scale
+        Each reward is customized based on the specifics of the task.
 
         Args:
             action (np array): [NOT USED]
@@ -349,39 +312,10 @@ class AirHockey(SingleArmEnv):
             float: reward value
         """
 
-        # print(self.sim.model._site_name2id.keys())
-
-        # print(self.sim.model._site_name2id.keys())
-
-        # 
-        # print("puck: ", self.sim.data.get_body_xpos("puck"))
-
-        # print("puck_x:", self.sim.data.get_joint_qpos("puck_x"))
-        # print("puck_y:", self.sim.data.get_joint_qpos("puck_y"))
-        # print("puck_yaw:", self.sim.data.get_joint_qpos("puck_yaw"))
-
-        # eef_ori = self.sim.data.get_body_xquat("gripper0_eef")
-        # eef_angle = self.quat2axisangle([eef_ori[1],eef_ori[2],eef_ori[3], eef_ori[0]])/math.pi*180
-        # print(eef_angle)
-
-        # gripper0_wiping_gripper position
-        # print(self.sim.data.get_body_xpos("gripper0_wiping_gripper"))
-        # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        # puck_vel = self.sim.data.get_body_xvelp("puck")
-        # if (puck_vel[0] < 0):
-        #     reward = puck_vel[0] / 5
-        # else:
-        #     reward = puck_vel[0] * 20
-        #
-        # gripper_pos = gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-        # goal_pos = self.sim.data.get_body_xpos("puck")
-        # reward -= 0.01
-
         puck_pos = np.dot(self.table_transform, self.sim.data.get_body_xpos("puck"))
         puck_vel = np.dot(self.table_transform, self.sim.data.get_body_xvelp("puck"))
         gripper_pos = np.dot(self.table_transform, self.sim.data.site_xpos[self.robots[0].eef_site_id])
         gripper_vel = self.sim.data.get_body_xvelp("gripper0_eef")
-        # print(f"dist: {np.linalg.norm((gripper_pos - self.goal_region)[:2])}")
         reward = 0
         if self.task == "TOUCHING_PUCK":
             reward = 10 if np.linalg.norm(puck_pos[:2] - gripper_pos[:2]) < 0.1 and gripper_vel[0] > 0.02 else 0
@@ -395,15 +329,6 @@ class AirHockey(SingleArmEnv):
             if puck_pos[0] > self.goal_x:
                 reward = 10
             else:
-                # reward = -abs(puck_pos[0] - self.goal_x) * 0.1
-                # print("reward: ", reward)
-            # else:
-                # if self.prev_puck_goal_dist is not None:
-                #     reward = (self.prev_puck_goal_dist - abs(puck_pos[0] - self.goal_x)) * 50
-                    # if reward > 0:
-                    #     reward = reward * 2
-                    # print("reward: ", reward)
-                
                 if puck_vel[0] > 0:
                     reward = puck_vel[0] * 10
                 else:
@@ -413,8 +338,6 @@ class AirHockey(SingleArmEnv):
 
             self.prev_puck_goal_dist = abs(puck_pos[0] - self.goal_x)
 
-            # print("dist: ", abs(puck_pos[0] - self.goal_x))
-            # print("reward: ", reward)
         elif self.task == "GOAL_REGION_DESIRED_VELOCITY":
             condition = (np.linalg.norm(
                 (puck_pos - self.goal_region)[:2]) <= 0.05 and  # Checks if the puck is in the correct region
@@ -456,10 +379,6 @@ class AirHockey(SingleArmEnv):
         """
         reward, done, info = super()._post_action(action)
 
-        # end_effector_pos = self.sim.data.get_body_xpos('robot0_right_hand')
-        # # Update the position of the sphere to match the end effector
-        # self.sim.model.body_pos[self.sim.model.body_name2id('robot0_end_effector_sphere')] = end_effector_pos
-
         done, reward = self._check_terminated(done, reward, info)
         return reward, done, info
 
@@ -472,28 +391,28 @@ class AirHockey(SingleArmEnv):
         Returns:
             bool: True if episode is terminated
         """
-        # terminated = False
+
         # Prematurely terminate if contacting the table with the arm
         if self.check_contact(self.robots[0].robot_model):
             reward = self.arm_limit_collision_penalty
-            # print("arm collision happens")
+            print("arm collision happens")
             info["terminated_reason"] = "arm_hit_table"
             done = True
         if self.check_contact("gripper0_hand_collision"):
             reward = self.arm_limit_collision_penalty
-            # print("gripper hand collision happens")
+            print("gripper hand collision happens")
             info["terminated_reason"] = "gripper_hit_table"
             done = True
 
         if self.robots[0].check_q_limits():
             reward = self.arm_limit_collision_penalty
-            # print("reach joint limits")
+            print("reach joint limits")
             info["terminated_reason"] = "arm_limit"
             done = True
 
         if self.sim.data.get_body_xpos("puck")[0] < -0.1:
             reward = self.arm_limit_collision_penalty
-            # print("puck out of table")
+            print("puck out of table")
             info["terminated_reason"] = "puck_out_of_table"
             done = True
 
@@ -502,7 +421,7 @@ class AirHockey(SingleArmEnv):
         if np.allclose(puck_pos[0:2], gripper_pos[0:2], atol=0.05) and gripper_pos[2] <= puck_pos[2] - 0.2:
             reward = self.arm_limit_collision_penalty
             info["terminated_reason"] = "paddle_on_puck"
-            print("PADDLE ON PUCK")
+            print("paddle on puck")
             done = True
 
         puck_vel = np.linalg.norm(np.dot(self.table_transform, self.sim.data.get_body_xvelp("puck")))
@@ -511,29 +430,14 @@ class AirHockey(SingleArmEnv):
         if puck_vel <= 0.01 and gripper_vel <= 0.01:
             reward = self.arm_limit_collision_penalty
             info["terminated_reason"] = "puck_stopped"
-            print("PUCK STOPPED")
+            print("puck stopped")
             done = True
-        # if np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])) >= 100:
-        #     print("too much force: ", np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3])))
-        #     reward = self.arm_limit_collision_penalty
-        #     done = True
-        # Prematurely terminate if task is success
+
         if self._check_success():
             
             info["terminated_reason"] = "success"
             done = True
         return done, reward
-
-    # def _check_success(self):
-    #     """
-    #     Check if cube has been lifted.
-    #     Returns:
-    #         bool: True if cube has been lifted
-    #     """
-
-    #     # gripper_pos = self.sim.data.site_xpos[self.robots[0].eef_site_id]
-    #     print("checks here")
-    #     return False
 
     def _load_model(self):
         """
@@ -561,7 +465,6 @@ class AirHockey(SingleArmEnv):
         self.model = ManipulationTask(
             mujoco_arena=mujoco_arena,
             mujoco_robots=[robot.robot_model for robot in self.robots],
-            # mujoco_objects=self.puck,
         )
 
     def _setup_references(self):
@@ -571,9 +474,6 @@ class AirHockey(SingleArmEnv):
         in a flatten array, which is how MuJoCo stores physical simulation data.
         """
         super()._setup_references()
-
-        # Additional object references from this env
-        # self.cube_body_id = self.sim.model.body_name2id(self.cube.root_body)
 
     def _setup_observables(self):
         """
@@ -590,22 +490,14 @@ class AirHockey(SingleArmEnv):
             pf = self.robots[0].robot_model.naming_prefix
             modality = "object"
 
-            # cube-related observables
-            @sensor(modality=modality)
-            def cube_pos(obs_cache):
-                return np.array(self.sim.data.body_xpos[self.cube_body_id])
 
             @sensor(modality=modality)
-            def cube_quat(obs_cache):
-                return convert_quat(np.array(self.sim.data.body_xquat[self.cube_body_id]), to="xyzw")
-
-            # @sensor(modality=modality)
-            # def gripper_to_puck_pos(obs_cache):
-            #     return (
-            #         obs_cache[f"{pf}eef_pos"] - obs_cache["goal_pos"]
-            #         if f"{pf}eef_pos" in obs_cache and "goal_pos" in obs_cache
-            #         else np.zeros(3)
-            #     )
+            def gripper_to_puck_pos(obs_cache):
+                return (
+                    obs_cache[f"{pf}eef_pos"] - obs_cache["goal_pos"]
+                    if f"{pf}eef_pos" in obs_cache and "goal_pos" in obs_cache
+                    else np.zeros(3)
+                )
 
             @sensor(modality=modality)
             def puck_pos(obs_cache):
@@ -638,9 +530,10 @@ class AirHockey(SingleArmEnv):
                 return self.sim.data.get_body_xvelp("gripper0_eef")[:2]
 
             sensors = [puck_pos, 
-                    #    gripper_to_puck_pos, 
+                       gripper_to_puck_pos, 
                        eef_vel, 
-                       puck_goal_dist]
+                       puck_goal_dist,
+                       puck_velo]
 
             # ["MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK"]
             if "GOAL_REGION" in self.task or self.task == "REACHING":
@@ -654,8 +547,6 @@ class AirHockey(SingleArmEnv):
 
             names = [s.__name__ for s in sensors]
 
-            # import pdb; pdb.set_trace()
-
             # Create observables
             for name, s in zip(names, sensors):
                 observables[name] = Observable(
@@ -663,7 +554,6 @@ class AirHockey(SingleArmEnv):
                     sensor=s,
                     sampling_rate=self.control_freq,
                 )
-            # import pdb; pdb.set_trace()
 
         return observables
 
@@ -681,7 +571,7 @@ class AirHockey(SingleArmEnv):
 
     def visualize(self, vis_settings):
         """
-        In addition to super call, visualize gripper site proportional to the distance to the cube.
+        Super call to visualize.
 
         Args:
             vis_settings (dict): Visualization keywords mapped to T/F, determining whether that specific
@@ -691,23 +581,14 @@ class AirHockey(SingleArmEnv):
         # Run superclass method first
         super().visualize(vis_settings=vis_settings)
 
-        # Color the gripper visualization site according to its distance to the cube
-        # if vis_settings["grippers"]:
-        #     self._visualize_gripper_to_target(gripper=self.robots[0].gripper, target=self.cube)
-
     def _check_success(self):
         """
-        Check if cube has been lifted.
+        Check if the task is complete.
 
         Returns:
-            bool: True if cube has been lifted
+            bool: True if the task has been completed.
         """
-        # cube_height = self.sim.data.body_xpos[self.cube_body_id][2]
-        # table_height = self.model.mujoco_arena.table_offset[2]
-
-        # # cube is higher than the table top above a margin
-        # return cube_height > table_height + 0.04
-
+        
         puck_pos = np.dot(self.table_transform, self.sim.data.get_body_xpos("puck"))
         puck_vel = np.dot(self.table_transform, self.sim.data.get_body_xvelp("puck"))
         gripper_pos = np.dot(self.table_transform, self.sim.data.site_xpos[self.robots[0].eef_site_id])
