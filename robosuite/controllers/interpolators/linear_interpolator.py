@@ -126,7 +126,7 @@ class LinearInterpolator(Interpolator):
                 x_current = T.mat2euler(T.quat2mat(x_current))
         else:
             # This is a normal interpolation
-            dx = (self.goal - x) * (self.step / self.total_steps)
+            dx = (self.goal - x) / (self.total_steps - self.step)
             x_current = x + dx
 
         # Increment step if there's still steps remaining based on ramp ratio
