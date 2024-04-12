@@ -137,9 +137,9 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             uncouple_pos_ori=False,
             logger=None,
             table_tilt=0.09,
-            table_elevation=1,
+            table_elevation=1.0,
             table_x_start=0.8,
-            z_offset=0.08,
+            z_offset=0.008,
             **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
     ):
 
@@ -167,8 +167,7 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             uncouple_pos_ori,
         )
 
-        if logger is not None:
-            self.logger = logger
+        self.logger = logger
 
         self.table_tilt = table_tilt
         self.table_elevation = table_elevation
@@ -179,7 +178,7 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
         self.x_offset = self.z_offset / np.tan(self.table_tilt)
 
         # fixed orientation for our air hockey controller
-        self.fixed_ori = trans.euler2mat(np.array([0, math.pi - table_tilt, 0]))
+        self.fixed_ori = trans.euler2mat(np.array([0, math.pi - self.table_tilt, 0]))
         self.goal_ori = np.array(self.fixed_ori)
 
 
@@ -190,7 +189,7 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
         Args:
             x (int): The x location to determine the correct z for
         """
-        return self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
+        return self.table_tilt * (x - self.table_x_start) + self.table_elevation + 0.02 - self.z_offset
 
     def set_goal(self, action, set_pos=None, set_ori=None):
         """
@@ -210,8 +209,8 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             set_ori (Iterable): IF set, overrides @action and sets the desired absolute eef orientation goal state
         """
         
-        super().set_goal(self, action)
-
+        super().set_goal(action)
+        
         self.goal_ori = self.fixed_ori
         self.goal_pos[2] = self.transform_z(self.goal_pos[0])
 
@@ -226,18 +225,9 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             self.relative_ori = np.zeros(3)  # relative orientation always starts at 0
 
     def run_controller(self):
-        """
-        Calculates the torques required to reach the desired setpoint.
+        # Call super to avoid compatibility issues
+        super().run_controller()
 
-        Executes Operational Space Control (OSC) -- either position only or position and orientation.
-
-        A detailed overview of derivation of OSC equations can be seen at:
-        http://khatib.stanford.edu/publications/pdfs/Khatib_1987_RA.pdf
-
-        Returns:
-             np.array: Command torques
-        """
-        # Update state
         self.update()
 
         msg = dict()
@@ -254,7 +244,7 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
         else:
             desired_pos = np.array(self.goal_pos)
 
-        desired_pos[2] = self.transform_z(desired_pos[0]) + 0.02
+        desired_pos[2] = self.transform_z(desired_pos[0])
 
         if self.interpolator_ori is not None:
             # relative orientation based on difference between current ori and ref
@@ -326,9 +316,6 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             self.mass_matrix, nullspace_matrix, self.initial_joint, self.joint_pos, self.joint_vel
         )
 
-        # Always run superclass call for any cleanups at the end
-        super().run_controller()
-
         return self.torques
 
     def reset_goal(self):
@@ -356,7 +343,7 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
 
     @property
     def control_limits(self):
-        return super().control_limits()
+        return super().control_limits
 
     @property
     def name(self):
