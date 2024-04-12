@@ -164,7 +164,6 @@ class RobotEnv(MujocoEnv):
         # Initialization Noise
         initialization_noise = self._input2list(initialization_noise, self.num_robots)
 
-
         # Observations -- Ground truth = object_obs, Image data = camera_obs
         self.use_camera_obs = use_camera_obs
 
