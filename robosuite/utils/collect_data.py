@@ -3,7 +3,7 @@ import numpy as np
 import robosuite
 import torch
 from robosuite import load_controller_config
-from ppo_continuous_action import Agent
+from robosuite.scripts.ppo_continuous_action import Agent
 from robosuite.wrappers import GymWrapper
 from torch import nn
 from torch.distributions.normal import Normal

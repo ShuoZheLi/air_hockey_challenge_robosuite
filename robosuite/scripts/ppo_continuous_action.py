@@ -56,7 +56,6 @@ def parse_args():
         help="the id of the environment")
     parser.add_argument("--task", type=str, default="REACHING",
             help="the task you wish to train")
-    # parser.add_argument("--total-timesteps", type=int, default=1_000_000,
     parser.add_argument("--total-timesteps", type=int, default=500_000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=3e-4,
