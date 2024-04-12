@@ -225,6 +225,19 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             self.relative_ori = np.zeros(3)  # relative orientation always starts at 0
 
     def run_controller(self):
+        """
+        Modified from original robosuite OSC controller.
+        
+        Calculates the torques required to reach the desired setpoint.
+
+        Executes Operational Space Control (OSC) -- either position only or position and orientation.
+
+        See osc.py for more details.
+
+        Returns:
+             np.array: Command torques
+        """
+
         # Call super to avoid compatibility issues
         super().run_controller()
 
