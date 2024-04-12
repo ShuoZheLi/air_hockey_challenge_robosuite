@@ -128,7 +128,7 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             kp_limits=(0, 300),
             damping_ratio_limits=(0, 100),
             policy_freq=20,
-            position_limits=None,
+            position_limits=[[-0.1, -0.4, -10], [0.26, 0.4, 0]],
             orientation_limits=None,
             interpolator_pos=None,
             interpolator_ori=None,
@@ -148,10 +148,26 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             eef_name,
             joint_indexes,
             actuator_range,
+            input_max,
+            input_min,
+            output_max,
+            output_min,
+            kp,
+            damping_ratio,
+            impedance_mode,
+            kp_limits,
+            damping_ratio_limits,
+            policy_freq,
+            position_limits,
+            orientation_limits,
+            interpolator_pos,
+            interpolator_ori,
+            control_ori,
+            control_delta,
+            uncouple_pos_ori,
         )
 
-        self.prev_normal = None
-        if logger:
+        if logger is not None:
             self.logger = logger
 
         self.table_tilt = table_tilt
@@ -162,78 +178,18 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
         self.z_offset = z_offset
         self.x_offset = self.z_offset / np.tan(self.table_tilt)
 
-        # Determine whether this is pos ori or just pos
-        self.use_ori = control_ori
-
-        # Determine whether we want to use delta or absolute values as inputs
-        self.use_delta = control_delta
-
-        # Control dimension
-        self.control_dim = 6 if self.use_ori else 3
-        self.name_suffix = "POSE" if self.use_ori else "POSITION"
-
-        # input and output max and min (allow for either explicit lists or single numbers)
-        self.input_max = self.nums2array(input_max, self.control_dim)
-        self.input_min = self.nums2array(input_min, self.control_dim)
-        self.output_max = self.nums2array(output_max, self.control_dim)
-        self.output_min = self.nums2array(output_min, self.control_dim)
-
-        # kp kd
-        self.kp = self.nums2array(kp, 6)
-        # self.kp[3:6] = 300
-        self.kd = 2 * np.sqrt(self.kp) * damping_ratio
-        # self.kd = damping_ratio
-
-        # kp and kd limits
-        self.kp_min = self.nums2array(kp_limits[0], 6)
-        self.kp_max = self.nums2array(kp_limits[1], 6)
-        self.damping_ratio_min = self.nums2array(damping_ratio_limits[0], 6)
-        self.damping_ratio_max = self.nums2array(damping_ratio_limits[1], 6)
-
-        # Verify the proposed impedance mode is supported
-        assert impedance_mode in IMPEDANCE_MODES, (
-            "Error: Tried to instantiate OSC controller for unsupported "
-            "impedance mode! Inputted impedance mode: {}, Supported modes: {}".format(impedance_mode, IMPEDANCE_MODES)
-        )
-
-        # Impedance mode
-        self.impedance_mode = impedance_mode
-
-        # Add to control dim based on impedance_mode
-        if self.impedance_mode == "variable":
-            self.control_dim += 12
-        elif self.impedance_mode == "variable_kp":
-            self.control_dim += 6
-
-        # limits
-        # self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
-        self.position_limits = np.array([[-0.1, -0.4, -10], [0.26, 0.4, 0]])
-        self.orientation_limits = np.array(orientation_limits) if orientation_limits is not None else orientation_limits
-
-        # control frequency
-        self.control_freq = policy_freq
-
-        # interpolator150
-        self.interpolator_pos = interpolator_pos
-        self.interpolator_ori = interpolator_ori
-
-        # whether or not pos and ori want to be uncoupled
-        self.uncoupling = uncouple_pos_ori
-
-        # initialize goals based on initial pos / ori
-        self.goal_pos = np.array(self.initial_ee_pos)
-
-        self.relative_ori = np.zeros(3)
-        self.ori_ref = None
-
-        self.fixed_ori = trans.euler2mat(np.array([0, math.pi - 0.09, 0]))
+        # fixed orientation for our air hockey controller
+        self.fixed_ori = trans.euler2mat(np.array([0, math.pi - table_tilt, 0]))
         self.goal_ori = np.array(self.fixed_ori)
 
 
     def transform_z(self, x):
-        '''
-        Calculates the correct z value for the Air Hockey table given the x location
-        '''
+        """
+        Calculates the correct z value for the Air Hockey table given the x location.
+
+        Args:
+            x (int): The x location to determine the correct z for
+        """
         return self.table_tilt * (x - self.table_x_start) + self.table_elevation - self.z_offset
 
     def set_goal(self, action, set_pos=None, set_ori=None):
@@ -253,57 +209,10 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
             set_pos (Iterable): If set, overrides @action and sets the desired absolute eef position goal state
             set_ori (Iterable): IF set, overrides @action and sets the desired absolute eef orientation goal state
         """
-        # Update state
-        self.update()
-
-        # Parse action based on the impedance mode, and update kp / kd as necessary
-        if self.impedance_mode == "variable":
-            damping_ratio, kp, delta = action[:6], action[6:12], action[12:]
-            self.kp = np.clip(kp, self.kp_min, self.kp_max)
-            self.kd = 2 * np.sqrt(self.kp) * np.clip(damping_ratio, self.damping_ratio_min, self.damping_ratio_max)
-        elif self.impedance_mode == "variable_kp":
-            kp, delta = action[:6], action[6:]
-            self.kp = np.clip(kp, self.kp_min, self.kp_max)
-            self.kd = 2 * np.sqrt(self.kp)  # critically damped
-        else:  # This is case "fixed"
-            delta = action
-
-        # If we're using deltas, interpret actions as such
-        if self.use_delta:
-            if delta is not None:
-                scaled_delta = self.scale_action(delta)
-                if not self.use_ori and set_ori is None:
-                    # Set default control for ori since user isn't actively controlling ori
-                    set_ori = np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, -1.0]])
-            else:
-                scaled_delta = []
-        # Else, interpret actions as absolute values
-        else:
-            if set_pos is None:
-                set_pos = delta[:3]
-            # Set default control for ori if we're only using position control
-            if set_ori is None:
-                set_ori = (
-                    T.quat2mat(T.axisangle2quat(delta[3:6]))
-                    if self.use_ori
-                    else np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, -1.0]])
-                )
-            # No scaling of values since these are absolute values
-            scaled_delta = delta
-
-        # We only want to update goal orientation if there is a valid delta ori value OR if we're using absolute ori
-        # use math.isclose instead of numpy because numpy is slow
-        bools = [0.0 if math.isclose(elem, 0.0) else 1.0 for elem in scaled_delta[3:]]
-        if sum(bools) > 0.0 or set_ori is not None:
-            self.goal_ori = set_goal_orientation(
-                scaled_delta[3:], self.ee_ori_mat, orientation_limit=self.orientation_limits, set_ori=set_ori
-            )
-        self.goal_pos = set_goal_position(
-            scaled_delta[:3], self.ee_pos, position_limit=self.position_limits, set_pos=set_pos
-        )
+        
+        super().set_goal(self, action)
 
         self.goal_ori = self.fixed_ori
-
         self.goal_pos[2] = self.transform_z(self.goal_pos[0])
 
         if self.interpolator_pos is not None:
@@ -422,13 +331,6 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
 
         return self.torques
 
-    def update_initial_joints(self, initial_joints):
-        # First, update from the superclass method
-        super().update_initial_joints(initial_joints)
-
-        # We also need to reset the goal in case the old goals were set to the initial confguration
-        self.reset_goal()
-
     def reset_goal(self):
         """
         Resets the goal to the current state of the robot
@@ -454,29 +356,7 @@ class AirHockeyOperationalSpaceController(OperationalSpaceController):
 
     @property
     def control_limits(self):
-        """
-        Returns the limits over this controller's action space, overrides the superclass property
-        Returns the following (generalized for both high and low limits), based on the impedance mode:
-
-            :Mode `'fixed'`: [joint pos command]
-            :Mode `'variable'`: [damping_ratio values, kp values, joint pos command]
-            :Mode `'variable_kp'`: [kp values, joint pos command]
-
-        Returns:
-            2-tuple:
-
-                - (np.array) minimum action values
-                - (np.array) maximum action values
-        """
-        if self.impedance_mode == "variable":
-            low = np.concatenate([self.damping_ratio_min, self.kp_min, self.input_min])
-            high = np.concatenate([self.damping_ratio_max, self.kp_max, self.input_max])
-        elif self.impedance_mode == "variable_kp":
-            low = np.concatenate([self.kp_min, self.input_min])
-            high = np.concatenate([self.kp_max, self.input_max])
-        else:  # This is case "fixed"
-            low, high = self.input_min, self.input_max
-        return low, high
+        return super().control_limits()
 
     @property
     def name(self):
