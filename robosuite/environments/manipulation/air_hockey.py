@@ -10,7 +10,10 @@ from robosuite.utils.placement_samplers import UniformRandomSampler
 import robosuite.utils.transform_utils as T
 from robosuite.utils.transform_utils import convert_quat
 from robosuite.utils.mjmod import DynamicsModder
-
+import yaml
+import xmltodict
+import time
+import datetime
 
 class AirHockey(SingleArmEnv):
     """
@@ -366,6 +369,43 @@ class AirHockey(SingleArmEnv):
 
         return reward
 
+    def get_transition(self, action):
+        """
+        Takes a step in simulation with control command @action and returns the resulting transition.
+        Args:
+            action (np.array): Action to execute within the environment
+        Returns:
+            4-tuple:
+                - (OrderedDict) observations from the environment
+        Raises:
+            ValueError: [Steps past episode termination]
+        """
+        self.timestep += 1
+
+        # Since the env.step frequency is slower than the mjsim timestep frequency, the internal controller will output
+        # multiple torque commands in between new high level action commands. Therefore, we need to denote via
+        # 'policy_step' whether the current step we're taking is simply an internal update of the controller,
+        # or an actual policy update
+        policy_step = True
+
+        # Loop through the simulation at the model timestep rate until we're ready to take the next policy step
+        # (as defined by the control frequency specified at the environment level)
+        for i in range(int(self.control_timestep / self.model_timestep)):
+            self.sim.forward()
+            self._pre_action(action, policy_step)
+            self.sim.step()
+            self._update_observables()
+            policy_step = False
+
+        # Note: this is done all at once to avoid floating point inaccuracies
+        self.cur_time += self.control_timestep
+
+        if self.viewer is not None and self.renderer != "mujoco":
+            self.viewer.update()
+
+        observations = self.viewer._get_observations() if self.viewer_get_obs else self._get_observations()
+        return observations
+
     def _post_action(self, action):
         """
         In addition to super method, add additional info if requested
@@ -444,18 +484,56 @@ class AirHockey(SingleArmEnv):
         Loads an xml model, puts it in self.model
         """
         super()._load_model()
+        YAML_PATH = "test.yaml"
+        
+        # Load yaml model - make this an arg later
+        with open(YAML_PATH, 'r') as file:
+            yaml_config = yaml.safe_load(file)
+        
+        sim_params = yaml_config['air_hockey']['simulator_params']
+        table_length = sim_params['length']
+        table_width = sim_params['width']
+        puck_radius = sim_params['puck_radius']
+        puck_damping = sim_params['puck_damping']
+
+        with open("robosuite/models/assets/arenas/air_hockey_table.xml", "r") as file:
+            xml_config = xmltodict.parse(file.read())
+
+        # table config
+        table_size = xml_config['mujoco']['worldbody']['body'][0]['body'][0]['geom']['@size']
+        xml_config['mujoco']['worldbody']['body'][0]['body'][0]['geom']['@size'] = f"{table_length} {table_width} {table_size.split()[2]}"
+
+        # puck config
+        puck_size = xml_config['mujoco']['worldbody']['body'][1]['body']['geom'][0]['@size']
+
+        xml_config['mujoco']['worldbody']['body'][1]['body']['geom'][0]['@size'] = f"{puck_radius} {puck_size.split()[1]}"
+        # puck damping x
+        xml_config['mujoco']['worldbody']['body'][1]['joint'][0]['@damping'] = f"{puck_damping}"
+        # puck damping y
+        xml_config['mujoco']['worldbody']['body'][1]['joint'][1]['@damping'] = f"{puck_damping}"
+        
+        # Get current timestamp
+        current_time = datetime.datetime.fromtimestamp(time.time())
+        formatted_time = current_time.strftime('%Y%m%d_%H%M%S')
+        
+        # Make new filebame
+        filename = f"air_hockey_table_{formatted_time}.xml"
+        
+        with open("robosuite/models/assets/arenas/" + filename, 'w') as file:
+            file.write(xmltodict.unparse(xml_config, pretty=True))
 
         # Adjust base pose accordingly
         xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
-        # print("xpos: ", xpos)
+        
         xpos = (-0.48, 0, 0)
         self.robots[0].robot_model.set_base_xpos(xpos)
-
+        
         # load model for table top workspace
         mujoco_arena = AirHockeyTableArena(
             table_full_size=self.table_full_size,
             table_friction=self.table_friction,
             table_offset=self.table_offset,
+            xml=f"arenas/{filename}"
         )
 
         # Arena always gets set to zero origin
@@ -491,13 +569,13 @@ class AirHockey(SingleArmEnv):
             modality = "object"
 
 
-            @sensor(modality=modality)
-            def gripper_to_puck_pos(obs_cache):
-                return (
-                    obs_cache[f"{pf}eef_pos"] - obs_cache["goal_pos"]
-                    if f"{pf}eef_pos" in obs_cache and "goal_pos" in obs_cache
-                    else np.zeros(3)
-                )
+            # @sensor(modality=modality)
+            # def gripper_to_puck_pos(obs_cache):
+            #     return (
+            #         obs_cache[f"{pf}eef_pos"] - obs_cache["goal_pos"]
+            #         if f"{pf}eef_pos" in obs_cache and "goal_pos" in obs_cache
+            #         else np.zeros(3)
+            #     )
 
             @sensor(modality=modality)
             def puck_pos(obs_cache):
@@ -530,12 +608,11 @@ class AirHockey(SingleArmEnv):
                 return self.sim.data.get_body_xvelp("gripper0_eef")[:2]
 
             sensors = [puck_pos, 
-                       gripper_to_puck_pos, 
+                    #    gripper_to_puck_pos, 
                        eef_vel, 
                        puck_goal_dist,
                        puck_velo]
 
-            # ["MIN_UPWARD_VELOCITY", "GOAL_REGION", "GOAL_REGION_DESIRED_VELOCITY", "JUGGLE_PUCK"]
             if "GOAL_REGION" in self.task or self.task == "REACHING":
                 sensors.append(goal_pos)
 
