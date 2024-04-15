@@ -8,8 +8,7 @@ import numpy as np
 import robosuite as suite
 # from air_hockey_challenge_robosuite.foxglove_logging import Logger
 from robosuite.wrappers.visualization_wrapper import VisualizationWrapper
-from robosuite.utils.camera_utils import get_camera_extrinsic_matrix, \
-    get_camera_intrinsic_matrix
+from robosuite.utils.camera_utils import get_camera_extrinsic_matrix, get_camera_intrinsic_matrix
 from robosuite.utils.RobosuiteTransforms import RobosuiteTransforms
 from robosuite.wrappers import GymWrapper
 
@@ -189,7 +188,8 @@ if __name__ == '__main__':
         # logger.stop()
         pass
 
-    savePath = "./Datasets/dataset" + str(datasetCounter)
+    timestamp = datetime.now().strftime("%m%d%Y%H%M%S")
+    savePath = f"./Datasets/dataset_{datasetCounter}_{len(dataset)}_{timestamp}"
     if (len(dataset) > 50):
         np.save(savePath, np.array(dataset))
         print("Saved dataset" + str(datasetCounter))

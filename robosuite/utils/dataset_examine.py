@@ -32,6 +32,7 @@ info["joint_vel"] = [self.sim.data.qvel[x] for x in self._ref_joint_vel_indexes]
 '''
 
 def sort_key(filename):
+    filename = os.path.basename(filename)
     # Split the filename on underscores
     parts = filename.split('_')
 
