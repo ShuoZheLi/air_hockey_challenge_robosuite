@@ -6,15 +6,22 @@ import sys
 
 import numpy as np
 import robosuite as suite
-# from air_hockey_challenge_robosuite.foxglove_logging import Logger
 from robosuite.wrappers.visualization_wrapper import VisualizationWrapper
 from robosuite.utils.camera_utils import get_camera_extrinsic_matrix, get_camera_intrinsic_matrix
 from robosuite.utils.RobosuiteTransforms import RobosuiteTransforms
 from robosuite.wrappers import GymWrapper
 
 import cv2
-import os
+import argparse
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--collect-data", type=bool, default=False, help="Whether or not to collect data")
+    parser.add_argument("--save-folder-path", type=str, default="./Datasets", help="The path for the folder to save the data to")
+    parser.add_argument("--foxglove-log", type=bool, default=False, help="Whether or not to use the foxglove logger to log data. Must have the foxglove logger properly installed.")
+    args = parser.parse_args()
+    return args
 
 def image_to_pygame(image):
     """
@@ -34,6 +41,7 @@ def update_window(image):
             sys.exit()
         elif event.type == pygame.MOUSEMOTION:
             pixel_coord[:2] = event.pos  # update the shared list with the mouse coordinates
+            pixel_coord[1] += 150 # adjusted to make the eef appear closer to the mouse
 
     # Draw the image onto the screen
     screen.blit(image_to_pygame(image), (0, 0))
@@ -47,6 +55,10 @@ def get_observation_data(obs):
 
 
 if __name__ == '__main__':
+
+    # Parse arguments
+    args = parse_args()
+
     # Initialize Pygame
     pygame.init()
 
@@ -59,9 +71,13 @@ if __name__ == '__main__':
     # Create a window
     screen = pygame.display.set_mode(size)
 
-    # logger = Logger()
+    if args.foxglove_log:
+        from air_hockey_challenge_robosuite.foxglove_logging import Logger
+        logger = Logger()
+
     config = {'env_name': 'AirHockey',
               'robots': ['UR5e'],
+
               'controller_configs':
                   {'type': 'OSC_POSE',
                    "kp": [1000, 1000, 1000, 1000, 1000, 1000],
@@ -72,7 +88,7 @@ if __name__ == '__main__':
                    "ramp_ratio": 1,
                    "kp_limits": (0, 10000000),
                    "uncouple_pos_ori": False,
-                #    "logger": logger
+                   "logger": logger if args.foxglove_log else None
                    },
               'gripper_types': 'Robotiq85Gripper', }
 
@@ -116,10 +132,12 @@ if __name__ == '__main__':
     count = 0
 
     datasetCounter = 1
-    for file in os.listdir("./Datasets"):
-        if file.endswith(".npy"):
-            datasetCounter += 1
-    dataset = []
+
+    if args.collect_data:
+        for file in os.listdir(args.save_folder_path):
+            if file.endswith(".npy"):
+                datasetCounter += 1
+        dataset = []
     try:
         startTime = time.time()
         currTime = (time.time() - startTime) * 1000
@@ -151,7 +169,8 @@ if __name__ == '__main__':
             # print(obs[-3:], action[6:9])
             # action[6:9] -= obs[-3:]
             obs, reward, done, truncated, info = env.step(action[6:] if count > delay else action[6:] * 0)
-            dataset.append((world_coord[0], world_coord[1], *tuple(info["puck_pos"]), *tuple(info["puck_vel"]), *tuple(info["gripper_pos"]), *tuple(info["gripper_vel"]), *tuple(info["joint_pos"]), *tuple(info["joint_vel"]), currTime, deltaTime)) # what the camera thinks your mouse location is + puck position (x, y, z)
+            if args.collect_data:
+                dataset.append((world_coord[0], world_coord[1], *tuple(info["puck_pos"]), *tuple(info["puck_vel"]), *tuple(info["gripper_pos"]), *tuple(info["gripper_vel"]), *tuple(info["joint_pos"]), *tuple(info["joint_vel"]), currTime, deltaTime)) # what the camera thinks your mouse location is + puck position (x, y, z)
             env.render()
 
 
@@ -160,12 +179,13 @@ if __name__ == '__main__':
 
             if (done):
                 timestamp = datetime.now().strftime("%m%d%Y%H%M%S")
-                savePath = f"./Datasets/dataset_{datasetCounter}_{len(dataset)}_{timestamp}"
-                if (len(dataset) > 50):
-                    np.save(savePath, np.array(dataset))
-                    print("Saved dataset" + str(datasetCounter))
-                    datasetCounter += 1
-                dataset = []
+                if args.collect_data:
+                    savePath = f"{args.save_folder_path}/dataset_{datasetCounter}_{len(dataset)}_{timestamp}"
+                    if (len(dataset) > 50):
+                        np.save(savePath, np.array(dataset))
+                        print("Saved dataset" + str(datasetCounter))
+                        datasetCounter += 1
+                    dataset = []
                 env = suite.make(
                         **config,
                         has_renderer=True,
@@ -178,18 +198,18 @@ if __name__ == '__main__':
                 env = VisualizationWrapper(env)
                 env = GymWrapper(env, keys=['agentview_image', 'robot0_eef_pos'])
 
-            print(len(dataset))
-            if len(dataset) > 999:
+            if args.collect_data and len(dataset) > 999:
                 break
 
     except KeyboardInterrupt:
         print("Keyboard Interrupt")
     finally:
-        # logger.stop()
-        pass
+        if args.folglove_log:
+            logger.stop()
 
     timestamp = datetime.now().strftime("%m%d%Y%H%M%S")
-    savePath = f"./Datasets/dataset_{datasetCounter}_{len(dataset)}_{timestamp}"
-    if (len(dataset) > 50):
-        np.save(savePath, np.array(dataset))
-        print("Saved dataset" + str(datasetCounter))
+    if args.collect_data:
+        savePath = f"{args.save_folder_path}/dataset_{datasetCounter}_{len(dataset)}_{timestamp}"
+        if (len(dataset) > 50):
+            np.save(savePath, np.array(dataset))
+            print("Saved dataset" + str(datasetCounter))
