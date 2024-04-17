@@ -79,7 +79,7 @@ if __name__ == '__main__':
               'robots': ['UR5e'],
 
               'controller_configs':
-                  {'type': 'OSC_POSE',
+                  {'type': 'AIR_HOCKEY_OSC_POSE',
                    "kp": [1000, 1000, 1000, 1000, 1000, 1000],
                    "damping_ratio": [1, 1, 1, 1, 1, 1],
                    'interpolation': 'linear',
