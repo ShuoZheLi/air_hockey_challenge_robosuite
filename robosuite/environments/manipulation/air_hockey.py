@@ -170,7 +170,7 @@ class AirHockey(SingleArmEnv):
             initial_qpos=[-0.265276, -1.383369, 2.326823, -2.601113, -1.547214, -3.405865],
             task="JUGGLE_PUCK"
     ):
-
+        initial_qpos =  (math.pi / 180 * np.array([-11.4, -63.2, 82.1, -113.2, -88.92, -101.25]))
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -188,7 +188,7 @@ class AirHockey(SingleArmEnv):
 
         gripper_types = "RoundGripper"
 
-        self.arm_limit_collision_penalty = -10
+        self.arm_limit_collision_penalty = -20
         self.success_reward = 50
         self.old_puck_pos = None
         self.goal_region_world = None
@@ -441,17 +441,22 @@ class AirHockey(SingleArmEnv):
         if self.check_contact("gripper0_hand_collision"):
             reward = self.arm_limit_collision_penalty
             print("gripper hand collision happens")
+            print("gripper hand collision happens")
             info["terminated_reason"] = "gripper_hit_table"
             done = True
+
 
         if self.robots[0].check_q_limits():
             reward = self.arm_limit_collision_penalty
             print("reach joint limits")
+            print("reach joint limits")
             info["terminated_reason"] = "arm_limit"
             done = True
 
-        if self.sim.data.get_body_xpos("puck")[0] < -0.1:
+        # if self.sim.data.get_body_xpos("puck")[0] < -0.1:
+        if self.sim.data.get_body_xpos("puck")[0] < 0.12:
             reward = self.arm_limit_collision_penalty
+            print("puck out of table")
             print("puck out of table")
             info["terminated_reason"] = "puck_out_of_table"
             done = True

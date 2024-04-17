@@ -159,7 +159,7 @@ if __name__ == "__main__":
     )
 
     # Wrap this environment in a visualization wrapper
-    env = VisualizationWrapper(env, indicator_configs=None)
+    env = VisualizationWrapper(environment, indicator_configs=None)
 
     # Setup printing options for numbers
     np.set_printoptions(formatter={"float": lambda x: "{0:0.3f}".format(x)})
