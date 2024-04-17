@@ -42,7 +42,7 @@ if __name__ == "__main__":
     config = {'env_name': 'AirHockey',
             'robots': ['UR5e'],
             'controller_configs':
-                    {'type': 'OSC_POSITION',
+                    {'type': 'AIR_HOCKEY_OSC_POSITION',
                     'interpolation': None,
                     "impedance_mode" : "fixed"},
             'gripper_types': 'Robotiq85Gripper',}

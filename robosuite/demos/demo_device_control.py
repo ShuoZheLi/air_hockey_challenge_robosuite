@@ -133,21 +133,11 @@ if __name__ == "__main__":
     controller_config = load_controller_config(default_controller=controller_name)
 
     # Create argument configuration
-    config = {'env_name': 'AirHockey',
-              'robots': ['UR5e'],
-              'controller_configs':
-                  {'type': 'OSC_POSE',
-                   "kp": [150, 150, 150, 150, 150, 150],
-                   "damping_ratio": [1, 1, 1, 1, 1, 1],
-                   'interpolation': 'linear',
-                   "impedance_mode": "fixed",
-                   "control_delta": False,
-                   "ramp_ratio": 1,
-                   "kp_limits": (0, 10000000),
-                   "uncouple_pos_ori": False,
-                #    "logger": logger
-                   },
-              'gripper_types': 'Robotiq85Gripper', }
+    config = {
+        "env_name": args.environment,
+        "robots": args.robots,
+        "controller_configs": controller_config,
+    }
 
     # Check if we're using a multi-armed environment and use env_configuration argument if so
     if "TwoArm" in args.environment:
@@ -156,14 +146,17 @@ if __name__ == "__main__":
         args.config = None
 
     # Create environment
-    environment = suite.make(
-            **config,
-            has_renderer=True,
-            has_offscreen_renderer=False,
-            render_camera="sideview",
-            use_camera_obs=False,
-            control_freq=20,
-        )
+    env = suite.make(
+        **config,
+        has_renderer=True,
+        has_offscreen_renderer=False,
+        render_camera="agentview",
+        ignore_done=True,
+        use_camera_obs=False,
+        reward_shaping=True,
+        control_freq=20,
+        hard_reset=False,
+    )
 
     # Wrap this environment in a visualization wrapper
     env = VisualizationWrapper(environment, indicator_configs=None)
@@ -183,8 +176,6 @@ if __name__ == "__main__":
         device = SpaceMouse(pos_sensitivity=args.pos_sensitivity, rot_sensitivity=args.rot_sensitivity)
     else:
         raise Exception("Invalid device choice: choose either 'keyboard' or 'spacemouse'.")
-    
-    print("env robot gripper: ", env.robots[0].gripper_type)
 
     while True:
         # Reset the environment
