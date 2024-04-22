@@ -129,7 +129,7 @@ def controller_factory(name, params):
         params["control_ori"] = True
         return AirHockeyOperationalSpaceController(interpolator_pos=interpolator, interpolator_ori=ori_interpolator, **params)
 
-    if name == "AIR_HOCKEY_OSC_POSE":
+    if name == "AIR_HOCKEY_OSC_POSITION":
         if interpolator is not None:
             interpolator.set_states(dim=3)  # EE control uses dim 3 for pos
         params["control_ori"] = False
