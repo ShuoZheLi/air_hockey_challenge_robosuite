@@ -2,12 +2,12 @@
     <actuator>
         <!-- Physical limits of the actuator. -->
         <!-- Values taken from https://www.universal-robots.com/articles/ur-articles/max-joint-torques/ -->
-        <motor ctrllimited="true" ctrlrange="-150.0 150.0" joint="shoulder_pan_joint" name="torq_j1"/>
-        <motor ctrllimited="true" ctrlrange="-150.0 150.0" joint="shoulder_lift_joint" name="torq_j2"/>
-        <motor ctrllimited="true" ctrlrange="-150.0 150.0" joint="elbow_joint" name="torq_j3"/>
-        <motor ctrllimited="true" ctrlrange="-28.0 28.0" joint="wrist_1_joint" name="torq_j4"/>
-        <motor ctrllimited="true" ctrlrange="-28.0 28.0" joint="wrist_2_joint" name="torq_j5"/>
-        <motor ctrllimited="true" ctrlrange="-28.0 28.0" joint="wrist_3_joint" name="torq_j6"/>
+        <motor ctrllimited="true" ctrlrange="-15000.0 15000.0" joint="shoulder_pan_joint" name="torq_j1"/>
+        <motor ctrllimited="true" ctrlrange="-15000.0 15000.0" joint="shoulder_lift_joint" name="torq_j2"/>
+        <motor ctrllimited="true" ctrlrange="-15000.0 15000.0" joint="elbow_joint" name="torq_j3"/>
+        <motor ctrllimited="true" ctrlrange="-2800.0 2800.0" joint="wrist_1_joint" name="torq_j4"/>
+        <motor ctrllimited="true" ctrlrange="-2800.0 2800.0" joint="wrist_2_joint" name="torq_j5"/>
+        <motor ctrllimited="true" ctrlrange="-2800.0 2800.0" joint="wrist_3_joint" name="torq_j6"/>
     </actuator>
     <asset>
 
@@ -68,7 +68,7 @@
 	    <geom mesh="base_vis_1" material="JointGrey" type="mesh" contype="0" conaffinity="0" group="1"/>
  
             <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="base" name="base_col"/>
-            <body name="shoulder_link" pos="0 0 0.163">
+            <body name="shoulder_link" pos="0 0 0.167">
                 <inertial pos="0 0 0" mass="3.7" diaginertia="0.0102675 0.0102675 0.00666" />
                 <joint name="shoulder_pan_joint" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" damping="0.001" frictionloss="0.01" />
 		<geom mesh="shoulder_vis_0" material="URBlue" type="mesh" contype="0" conaffinity="0" group="1"/>

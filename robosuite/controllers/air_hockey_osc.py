@@ -5,18 +5,15 @@ import numpy as np
 import robosuite.utils.transform_utils as T
 from robosuite.controllers.base_controller import Controller
 from robosuite.utils.control_utils import *
+from robosuite.controllers.osc import OperationalSpaceController
 
 # Supported impedance modes
 IMPEDANCE_MODES = {"fixed", "variable", "variable_kp"}
 
-# TODO: Maybe better naming scheme to differentiate between input / output min / max and pos/ori limits, etc.
-
-
-class OperationalSpaceController(Controller):
+class AirHockeyOperationalSpaceController(OperationalSpaceController):
     """
-    Controller for controlling robot arm via operational space control. Allows position and / or orientation control
-    of the robot's end effector. For detailed information as to the mathematical foundation for this controller, please
-    reference http://khatib.stanford.edu/publications/pdfs/Khatib_1987_RA.pdf
+    Modified version of the Operational Space controller to control the air hockey robot and keep the end effector on
+    a table incline. See OSC.py for more details on Operational Space Control.
 
     NOTE: Control input actions can either be taken to be relative to the current position / orientation of the
     end effector or absolute values. In either case, a given action to this controller is assumed to be of the form:
@@ -98,6 +95,16 @@ class OperationalSpaceController(Controller):
 
         uncouple_pos_ori (bool): Whether to decouple torques meant to control pos and torques meant to control ori
 
+        logger (foxglove logger): Whether to use foxglove's logger to record required controller values
+
+        table_tilt (int): The incline angle of the table that the setup has
+
+        table_elevation: The z location of the table relative to the ground
+
+        x_start: The x value of the start of the table closest to the robot
+
+        z_offset: How far below the table we want the end effector to attempt pushing into (used to increase force on table)
+
         **kwargs: Does nothing; placeholder to "sink" any additional arguments so that instantiating this controller
             via an argument dict that has additional extraneous arguments won't raise an error
 
@@ -106,29 +113,34 @@ class OperationalSpaceController(Controller):
     """
 
     def __init__(
-        self,
-        sim,
-        eef_name,
-        joint_indexes,
-        actuator_range,
-        input_max=1,
-        input_min=-1,
-        output_max=(0.05, 0.05, 0.05, 0.5, 0.5, 0.5),
-        output_min=(-0.05, -0.05, -0.05, -0.5, -0.5, -0.5),
-        kp=150,
-        damping_ratio=1,
-        impedance_mode="fixed",
-        kp_limits=(0, 300),
-        damping_ratio_limits=(0, 100),
-        policy_freq=20,
-        position_limits=None,
-        orientation_limits=None,
-        interpolator_pos=None,
-        interpolator_ori=None,
-        control_ori=True,
-        control_delta=True,
-        uncouple_pos_ori=True,
-        **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
+            self,
+            sim,
+            eef_name,
+            joint_indexes,
+            actuator_range,
+            input_max=1,
+            input_min=-1,
+            output_max=0.5,
+            output_min=-0.5,
+            kp=150,
+            damping_ratio=1,
+            impedance_mode="variable_kp",
+            kp_limits=(0, 300),
+            damping_ratio_limits=(0, 100),
+            policy_freq=20,
+            position_limits=[[-0.1, -0.4, -10], [0.26, 0.4, 0]],
+            orientation_limits=None,
+            interpolator_pos=None,
+            interpolator_ori=None,
+            control_ori=True,
+            control_delta=True,
+            uncouple_pos_ori=False,
+            logger=None,
+            table_tilt=0.09,
+            table_elevation=1.0,
+            table_x_start=0.8,
+            z_offset=0.008,
+            **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
     ):
 
         super().__init__(
@@ -136,68 +148,48 @@ class OperationalSpaceController(Controller):
             eef_name,
             joint_indexes,
             actuator_range,
-        )
-        # Determine whether this is pos ori or just pos
-        self.use_ori = control_ori
-
-        # Determine whether we want to use delta or absolute values as inputs
-        self.use_delta = control_delta
-
-        # Control dimension
-        self.control_dim = 6 if self.use_ori else 3
-        self.name_suffix = "POSE" if self.use_ori else "POSITION"
-
-        # input and output max and min (allow for either explicit lists or single numbers)
-        self.input_max = self.nums2array(input_max, self.control_dim)
-        self.input_min = self.nums2array(input_min, self.control_dim)
-        self.output_max = self.nums2array(output_max, self.control_dim)
-        self.output_min = self.nums2array(output_min, self.control_dim)
-
-        # kp kd
-        self.kp = self.nums2array(kp, 6)
-        self.kd = 2 * np.sqrt(self.kp) * damping_ratio
-
-        # kp and kd limits
-        self.kp_min = self.nums2array(kp_limits[0], 6)
-        self.kp_max = self.nums2array(kp_limits[1], 6)
-        self.damping_ratio_min = self.nums2array(damping_ratio_limits[0], 6)
-        self.damping_ratio_max = self.nums2array(damping_ratio_limits[1], 6)
-
-        # Verify the proposed impedance mode is supported
-        assert impedance_mode in IMPEDANCE_MODES, (
-            "Error: Tried to instantiate OSC controller for unsupported "
-            "impedance mode! Inputted impedance mode: {}, Supported modes: {}".format(impedance_mode, IMPEDANCE_MODES)
+            input_max,
+            input_min,
+            output_max,
+            output_min,
+            kp,
+            damping_ratio,
+            impedance_mode,
+            kp_limits,
+            damping_ratio_limits,
+            policy_freq,
+            position_limits,
+            orientation_limits,
+            interpolator_pos,
+            interpolator_ori,
+            control_ori,
+            control_delta,
+            uncouple_pos_ori,
         )
 
-        # Impedance mode
-        self.impedance_mode = impedance_mode
+        self.logger = logger
 
-        # Add to control dim based on impedance_mode
-        if self.impedance_mode == "variable":
-            self.control_dim += 12
-        elif self.impedance_mode == "variable_kp":
-            self.control_dim += 6
+        self.table_tilt = table_tilt
+        self.table_elevation = table_elevation
+        self.table_x_start = table_x_start
 
-        # limits
-        self.position_limits = np.array(position_limits) if position_limits is not None else position_limits
-        self.orientation_limits = np.array(orientation_limits) if orientation_limits is not None else orientation_limits
+        # calculate x_offset to push controller into table orthogonal to table tilt
+        self.z_offset = z_offset
+        self.x_offset = self.z_offset / np.tan(self.table_tilt)
 
-        # control frequency
-        self.control_freq = policy_freq
+        # fixed orientation for our air hockey controller
+        self.fixed_ori = trans.euler2mat(np.array([0, math.pi - self.table_tilt, 0]))
+        self.goal_ori = np.array(self.fixed_ori)
 
-        # interpolator
-        self.interpolator_pos = interpolator_pos
-        self.interpolator_ori = interpolator_ori
 
-        # whether or not pos and ori want to be uncoupled
-        self.uncoupling = uncouple_pos_ori
+    def transform_z(self, x):
+        """
+        Calculates the correct z value for the Air Hockey table given the x location.
 
-        # initialize goals based on initial pos / ori
-        self.goal_ori = np.array(self.initial_ee_ori_mat)
-        self.goal_pos = np.array(self.initial_ee_pos)
-
-        self.relative_ori = np.zeros(3)
-        self.ori_ref = None
+        Args:
+            x (int): The x location to determine the correct z for
+        """
+        return self.table_tilt * (x - self.table_x_start) + self.table_elevation + 0.02 - self.z_offset
 
     def set_goal(self, action, set_pos=None, set_ori=None):
         """
@@ -216,54 +208,11 @@ class OperationalSpaceController(Controller):
             set_pos (Iterable): If set, overrides @action and sets the desired absolute eef position goal state
             set_ori (Iterable): IF set, overrides @action and sets the desired absolute eef orientation goal state
         """
-        # Update state
-        self.update()
-
-        # Parse action based on the impedance mode, and update kp / kd as necessary
-        if self.impedance_mode == "variable":
-            damping_ratio, kp, delta = action[:6], action[6:12], action[12:]
-            self.kp = np.clip(kp, self.kp_min, self.kp_max)
-            self.kd = 2 * np.sqrt(self.kp) * np.clip(damping_ratio, self.damping_ratio_min, self.damping_ratio_max)
-        elif self.impedance_mode == "variable_kp":
-            kp, delta = action[:6], action[6:]
-            self.kp = np.clip(kp, self.kp_min, self.kp_max)
-            self.kd = 2 * np.sqrt(self.kp)  # critically damped
-        else:  # This is case "fixed"
-            delta = action
-
-        # If we're using deltas, interpret actions as such
-        if self.use_delta:
-            if delta is not None:
-                scaled_delta = self.scale_action(delta)
-                if not self.use_ori and set_ori is None:
-                    # Set default control for ori since user isn't actively controlling ori
-                    set_ori = np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, -1.0]])
-            else:
-                scaled_delta = []
-        # Else, interpret actions as absolute values
-        else:
-            if set_pos is None:
-                set_pos = delta[:3]
-            # Set default control for ori if we're only using position control
-            if set_ori is None:
-                set_ori = (
-                    T.quat2mat(T.axisangle2quat(delta[3:6]))
-                    if self.use_ori
-                    else np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, -1.0]])
-                )
-            # No scaling of values since these are absolute values
-            scaled_delta = delta
-
-        # We only want to update goal orientation if there is a valid delta ori value OR if we're using absolute ori
-        # use math.isclose instead of numpy because numpy is slow
-        bools = [0.0 if math.isclose(elem, 0.0) else 1.0 for elem in scaled_delta[3:]]
-        if sum(bools) > 0.0 or set_ori is not None:
-            self.goal_ori = set_goal_orientation(
-                scaled_delta[3:], self.ee_ori_mat, orientation_limit=self.orientation_limits, set_ori=set_ori
-            )
-        self.goal_pos = set_goal_position(
-            scaled_delta[:3], self.ee_pos, position_limit=self.position_limits, set_pos=set_pos
-        )
+        
+        super().set_goal(action)
+        
+        self.goal_ori = self.fixed_ori
+        self.goal_pos[2] = self.transform_z(self.goal_pos[0])
 
         if self.interpolator_pos is not None:
             self.interpolator_pos.set_goal(self.goal_pos)
@@ -277,18 +226,24 @@ class OperationalSpaceController(Controller):
 
     def run_controller(self):
         """
+        Modified from original robosuite OSC controller.
+        
         Calculates the torques required to reach the desired setpoint.
 
         Executes Operational Space Control (OSC) -- either position only or position and orientation.
 
-        A detailed overview of derivation of OSC equations can be seen at:
-        http://khatib.stanford.edu/publications/pdfs/Khatib_1987_RA.pdf
+        See osc.py for more details.
 
         Returns:
              np.array: Command torques
         """
-        # Update state
+
+        # Call super to avoid compatibility issues
+        super().run_controller()
+
         self.update()
+
+        msg = dict()
 
         desired_pos = None
         # Only linear interpolator is currently supported
@@ -302,6 +257,8 @@ class OperationalSpaceController(Controller):
         else:
             desired_pos = np.array(self.goal_pos)
 
+        desired_pos[2] = self.transform_z(desired_pos[0])
+
         if self.interpolator_ori is not None:
             # relative orientation based on difference between current ori and ref
             self.relative_ori = orientation_error(self.ee_ori_mat, self.ori_ref)
@@ -311,21 +268,43 @@ class OperationalSpaceController(Controller):
             desired_ori = np.array(self.goal_ori)
             ori_error = orientation_error(desired_ori, self.ee_ori_mat)
 
-        # Compute desired force and torque based on errors
         position_error = desired_pos - self.ee_pos
         vel_pos_error = -self.ee_pos_vel
-
-        # F_r = kp * pos_err + kd * vel_err
-        desired_force = np.multiply(np.array(position_error), np.array(self.kp[0:3])) + np.multiply(
-            vel_pos_error, self.kd[0:3]
-        )
-
         vel_ori_error = -self.ee_ori_vel
 
-        # Tau_r = kp * ori_err + kd * vel_err
+        position_error_in_base = T.make_pose(position_error, np.eye(3))
+
+        table_in_base = T.make_pose(np.array([0, 0, 0]), trans.euler2mat(np.array([0, -self.table_tilt, 0])))
+        base_in_table = T.pose_inv(table_in_base)
+
+        position_error_in_table = T.pose_in_A_to_pose_in_B(position_error_in_base, base_in_table)
+        velocity_error_in_table, _ = T.vel_in_A_to_vel_in_B(vel_pos_error, vel_ori_error, base_in_table)
+
+        msg["desired_pos"] = T.pose_in_A_to_pose_in_B(T.make_pose(desired_pos, np.eye(3)), base_in_table)[:3, 3].tolist()
+        msg["actual_pos"] = T.pose_in_A_to_pose_in_B(T.make_pose(self.ee_pos, np.eye(3)), base_in_table)[:3, 3].tolist()
+
+        msg["position_error"] = position_error_in_table[:3, 3].tolist()
+        msg["velocity_error"] = velocity_error_in_table.tolist()
+
+        msg["desired_ori"] = np.rad2deg(T.mat2euler(self.goal_ori, 'rxyz')).tolist()
+        msg["actual_ori"] = np.rad2deg(T.mat2euler(self.ee_ori_mat, 'rxyz')).tolist()
+
+        msg["ori_error"] = ori_error.tolist()
+        msg["vel_ori_error"] = vel_ori_error.tolist()
+
+        desired_force = np.dot(np.dot(base_in_table[:3, :3], np.eye(3)), position_error_in_table[:3, 3]) * self.kp[:3]
+        desired_force += np.dot(np.dot(base_in_table[:3, :3], np.eye(3)), velocity_error_in_table) * self.kd[:3]
+
         desired_torque = np.multiply(np.array(ori_error), np.array(self.kp[3:6])) + np.multiply(
             vel_ori_error, self.kd[3:6]
         )
+
+        msg["desired_force"] = desired_force.tolist()
+        msg["desired_torque"] = desired_torque.tolist()
+        msg["desired_force_in_table"] = np.dot(base_in_table[:3, :3].T, desired_force).tolist()
+
+        if self.logger is not None:
+            self.logger.send_message(msg)
 
         # Compute nullspace matrix (I - Jbar * J) and lambda matrices ((J * M^-1 * J^T)^-1)
         lambda_full, lambda_pos, lambda_ori, nullspace_matrix = opspace_matrices(
@@ -343,7 +322,6 @@ class OperationalSpaceController(Controller):
 
         # Gamma (without null torques) = J^T * F + gravity compensations
         self.torques = np.dot(self.J_full.T, decoupled_wrench) + self.torque_compensation
-
         # Calculate and add nullspace torques (nullspace_matrix^T * Gamma_null) to final torques
         # Note: Gamma_null = desired nullspace pose torques, assumed to be positional joint control relative
         #                     to the initial joint positions
@@ -351,24 +329,18 @@ class OperationalSpaceController(Controller):
             self.mass_matrix, nullspace_matrix, self.initial_joint, self.joint_pos, self.joint_vel
         )
 
-        # Always run superclass call for any cleanups at the end
-        super().run_controller()
-
         return self.torques
-
-    def update_initial_joints(self, initial_joints):
-        # First, update from the superclass method
-        super().update_initial_joints(initial_joints)
-
-        # We also need to reset the goal in case the old goals were set to the initial confguration
-        self.reset_goal()
 
     def reset_goal(self):
         """
         Resets the goal to the current state of the robot
         """
         self.goal_ori = np.array(self.ee_ori_mat)
+
+        self.goal_ori = self.fixed_ori
         self.goal_pos = np.array(self.ee_pos)
+
+        self.goal_pos[2] = self.transform_z(self.goal_pos[0])
 
         # Also reset interpolators if required
 
@@ -384,30 +356,8 @@ class OperationalSpaceController(Controller):
 
     @property
     def control_limits(self):
-        """
-        Returns the limits over this controller's action space, overrides the superclass property
-        Returns the following (generalized for both high and low limits), based on the impedance mode:
-
-            :Mode `'fixed'`: [joint pos command]
-            :Mode `'variable'`: [damping_ratio values, kp values, joint pos command]
-            :Mode `'variable_kp'`: [kp values, joint pos command]
-
-        Returns:
-            2-tuple:
-
-                - (np.array) minimum action values
-                - (np.array) maximum action values
-        """
-        if self.impedance_mode == "variable":
-            low = np.concatenate([self.damping_ratio_min, self.kp_min, self.input_min])
-            high = np.concatenate([self.damping_ratio_max, self.kp_max, self.input_max])
-        elif self.impedance_mode == "variable_kp":
-            low = np.concatenate([self.kp_min, self.input_min])
-            high = np.concatenate([self.kp_max, self.input_max])
-        else:  # This is case "fixed"
-            low, high = self.input_min, self.input_max
-        return low, high
+        return super().control_limits
 
     @property
     def name(self):
-        return "OSC_" + self.name_suffix
+        return "AIR_HOCKEY_OSC_" + self.name_suffix

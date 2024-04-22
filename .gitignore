@@ -115,3 +115,14 @@ mjkey.txt
 
 # private macros
 macros_private.py
+
+
+*.cleanrl_model
+
+*events*
+
+wandb/
+
+MUJOCO_LOG.TXT
+
+runs/
