@@ -59,6 +59,7 @@ class Listener(FoxgloveServerListener):
 
 class Logger:
     def __init__(self):
+        # Setup logging process and manager for communication
         self.process = None
         self.manager = Manager()
         self.shared_dict = self.manager.dict()
@@ -73,6 +74,7 @@ class Logger:
         return new_logger
 
     def start(self):
+        # Start Logger Process
         if self.has_started:
             return
         self.process = Process(target=self.run_server, daemon=True)
@@ -81,13 +83,17 @@ class Logger:
         self.has_started = True
 
     def stop(self):
+        # Stop Logger Process
         if self.process is not None:
             self.process.join()
 
     def run_server(self):
+        # This is run when the process is started. This starts
+        # the coroutine responsible for hosting the foxglove server
         run_cancellable(self.send_message_loop())
 
     async def send_message_loop(self):
+        # Creates the foxglove server.
         async with FoxgloveServer(
                 "0.0.0.0",
                 8765,
@@ -126,12 +132,14 @@ class Logger:
                 }
             )
 
+            # This is the actual message loop that sends messages to the server
             while True:
                 await asyncio.sleep(0.01)
-                with self.lock:  # Acquire the lock before reading from the shared_dict
+                with self.lock:  # Acquire the lock before reading from the shared dictionary.
                     msg = dict(self.shared_dict)
                     self.shared_dict.clear()
 
+                    # If a message is present, send it to the server
                     if len(msg):
                         await server.send_message(
                             chan_id,
@@ -140,6 +148,9 @@ class Logger:
                         )
 
     def send_message(self, json_dump):
+        # Starts the logger if it hasn't been started already. Also places the message
+        # in the shared dictionary so that it can be passed along to the logger process
+
         if not self.has_started:
             self.start()
 
