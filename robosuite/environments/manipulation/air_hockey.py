@@ -500,7 +500,7 @@ class AirHockey(SingleArmEnv):
         table_width = sim_params['width']
         puck_radius = sim_params['puck_radius']
         puck_damping = sim_params['puck_damping']
-
+       
         with open("robosuite/models/assets/arenas/air_hockey_table.xml", "r") as file:
             xml_config = xmltodict.parse(file.read())
 
@@ -521,7 +521,7 @@ class AirHockey(SingleArmEnv):
         current_time = datetime.datetime.fromtimestamp(time.time())
         formatted_time = current_time.strftime('%Y%m%d_%H%M%S')
         
-        # Make new filebame
+        # Make new filename
         filename = f"air_hockey_table_{formatted_time}.xml"
         
         with open("robosuite/models/assets/arenas/" + filename, 'w') as file:
